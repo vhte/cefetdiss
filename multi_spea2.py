@@ -8,7 +8,7 @@ Created on Thu Dec 11 14:32:14 2014
 """
 import d519
 import math # math.floor() para baixo round() para cima
-import sys
+#import sys
 #sys.setrecursionlimit(100000)
 
 # PARAMETROS

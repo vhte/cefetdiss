@@ -26,7 +26,7 @@ import math # math.floor() para baixo round() para cima
 
 ########### PARAMETROS ###########
 # Numero de geracoes
-g = 50
+g = 100
 # Tamanho populacao
 m = 150
 # Probabilidade crossover
@@ -115,32 +115,40 @@ class Cromossomo:
         self.penalidade = rho * (totalPesoCrom - W)
         
 ####################### MAIN #######################
-def mono_ga():
+def mono_ga(params):
+    debug = params[0]
+    
+    melhoresGeracao = [] # a resposta do algoritmo, para cada geração uma única resposta será enviada
     avg = [0]*g
-    print 'Iniciou o algoritmo'
+    if debug:
+        print 'Iniciou o algoritmo'
     # Crio os cromossomos e gero populacao 1
     populacao = [0]*m
-    print 'Instaciou população'
+    if debug:
+        print 'Instaciou população'
     for i in range(0,m):
         populacao[i] = Cromossomo(n)
         
         # Avalio cada cromossomo e armazeno seu valor
         populacao[i].fitness = populacao[i].calculaFitness()
     
-    print 'Criou populacao'
+    if debug:
+        print 'Criou populacao'
     
     # Seto o número de vezes em que a geração deu o mesmo resultado
-    mesmoResultado = 0
-    ultimoResultado = 0
+    #mesmoResultado = 0
+    #ultimoResultado = 0
     # Inicio as gerações
     for i in range(0,g):
-        print 'Inicio geração %d' % (i)
-        for j in range(0,m):
-            print populacao[j].alelos
+        if debug:
+            print 'Inicio geração %d' % (i)
+            for j in range(0,m):
+                print populacao[j].alelos
         # Verifico se vai entrar no crossover
         r = d519.randrange(0,100)
         if r < crossover:
-            print 'Entrou crossover'
+            if debug:
+                print 'Entrou crossover'
             # Entrou no crossover, seleciono nova população a partir de torneio binário para seleção de pais
             # Devem ser 'm' tamanho da população de pais
             # O torneio selecionará dois cromossomos aleatórios e aquele que tiver maior fitness será o escolhido
@@ -167,8 +175,9 @@ def mono_ga():
                     vencedorAnterior = pai2Pos
                     
                 j = j+1
-            print 'torneio: '
-            print torneio
+            if debug:
+                print 'torneio: '
+                print torneio
             # Crio vetor de nova populacao
             novaPop = []
             
@@ -198,19 +207,20 @@ def mono_ga():
                 for k in range(ate,n):
                     filho1.alelos[k] = populacao[torneio[j+1]].alelos[k]
                     filho2.alelos[k] = populacao[torneio[j]].alelos[k]
-                print '==============='
-                print 'torneio: '
-                print torneio
-                print 'Pai1 (%d): ' % (torneio[j])
-                print populacao[torneio[j]].alelos
-                print 'Pai2 (%d):' % (torneio[j+1])
-                print populacao[torneio[j+1]].alelos
-                print 'Ponto de corte: %d' % (ate)
-                print 'Filho1: '
-                print filho1.alelos
-                print 'Filho2: '
-                print filho2.alelos
-                print '==============='
+                if debug:
+                    print '==============='
+                    print 'torneio: '
+                    print torneio
+                    print 'Pai1 (%d): ' % (torneio[j])
+                    print populacao[torneio[j]].alelos
+                    print 'Pai2 (%d):' % (torneio[j+1])
+                    print populacao[torneio[j+1]].alelos
+                    print 'Ponto de corte: %d' % (ate)
+                    print 'Filho1: '
+                    print filho1.alelos
+                    print 'Filho2: '
+                    print filho2.alelos
+                    print '==============='
                 
                 # Adiciono os filhos gerados na nova população
                 novaPop.append(filho1)
@@ -219,7 +229,8 @@ def mono_ga():
             # Inicio mutação
             r = d519.randrange(0,100)
             if r < mutacao:
-                print 'Entrou mutação'
+                if debug:
+                    print 'Entrou mutação'
                 # Para cada indivíduo de novaPop, seleciono um bit aleatório e inverto o valor
                 for j in range(0,m):
                     bit = d519.randrange(0,n)
@@ -230,21 +241,40 @@ def mono_ga():
             # Fim mutação
             # Calcula penalidade dos filhos
             for j in range(0,m):
-                novaPop[j].calculaPenalidade()
+                novaPop[j].calculaPenalidade()    
 
             # Atualiza população
             del populacao
             populacao = novaPop
-        #Fim geração
-        print 'Fim da geração %d' % (i)
+            #terminou crossover/mutacao
+            
+        # Procedimentos para fim geração
+            
+        # Verifico quem é o melhor para adicionar em melhoresGeracao
+        # Imprime melhor solução FACTÍVEL
+        best = [-1, 0, 0]
+        for j in range(0,m):
+            if populacao[j].calculaValor() > best[1] and populacao[j].calculaPeso() <= W:
+                best = [j, populacao[j].calculaValor(), populacao[j].calculaPeso()]
+        if best[0] == -1:
+            if debug:
+                print 'Nao obteve solução factível ):'
+            melhoresGeracao.append(0)
+        else:
+            melhoresGeracao.append(best[1])
+        
+        if debug:
+            print 'Fim da geração %d' % (i)
         
         # Mostro os cromossomos da população
         for j in range(0,m):
-            print 'Cromossomo %d: Valor: %f Peso: %f Penalidade: %f' % (j, populacao[j].calculaValor(), populacao[j].calculaPeso(), populacao[j].penalidade)
-            print populacao[j].alelos
+            if debug:
+                print 'Cromossomo %d: Valor: %f Peso: %f Penalidade: %f' % (j, populacao[j].calculaValor(), populacao[j].calculaPeso(), populacao[j].penalidade)
+                print populacao[j].alelos
             avg[i] = avg[i]+populacao[j].calculaValor()
         avg[i] = avg[i]/float(m)
         
+        """
         # Verifico condição de parada
         if avg[i] == ultimoResultado:
             mesmoResultado = mesmoResultado + 1
@@ -253,7 +283,7 @@ def mono_ga():
         else:
             ultimoResultado = avg[i]
             mesmoResultado = 0
-            
+        """ 
     
     # Imprime melhor solução FACTÍVEL
     best = [-1, 0, 0]
@@ -261,16 +291,20 @@ def mono_ga():
         if populacao[j].calculaValor() > best[1] and populacao[j].calculaPeso() <= W:
             best = [j, populacao[j].calculaValor(), populacao[j].calculaPeso()]
     if best[0] == -1:
-        print 'Nao obteve solução factível ):'
-        return
+        if debug:
+            print 'Nao obteve solução factível ):'
+        return 0
     
-    # Obteve solução factível e imprima a melhor (cromossomo)
-    print '---------------'
-    print 'Melhor solução no cromossomo %d: %f com peso %f' % (best[0], best[1], best[2])
-    print populacao[best[0]].alelos
+    if debug:
+        # Obteve solução factível e imprima a melhor (cromossomo)
+        print '---------------'
+        print 'Melhor solução no cromossomo %d: %f com peso %f' % (best[0], best[1], best[2])
+        print populacao[best[0]].alelos
+        
+        print '---------------'
+        print 'Medias das gerações: '
+        print avg
+    #return populacao[best[0]].alelos
+    return melhoresGeracao
     
-    print '---------------'
-    print 'Medias das gerações: '
-    print avg
-    
-mono_ga()
+#print len(mono_ga([False]))

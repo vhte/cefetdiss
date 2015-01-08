@@ -8,7 +8,7 @@ Created on Sun Sep 28 14:25:41 2014
 """
 import copy
 from random import randrange
-import mysql.connector
+#import mysql.connector
 from scipy import stats as scistats
 # Calcula a media geometrica dos valores
 def calculaIc(solucao, icG):
