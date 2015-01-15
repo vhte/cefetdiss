@@ -16,15 +16,16 @@ import mono_ils
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
+import timeit
 
-#plt.ion()
+plt.ion()
 
 # Quantidade de vezes a ser executado
-n = 30
+n = 1
 
 # lista dos métodos a serem chamados
 algoritmos = ['mono_ils','mono_ga', 'mono_aco']
-#algoritmos = ['mono_ils','mono_ga']
+#algoritmos = ['mono_ils', 'mono_ga']
 # lista de marcadores do matplotlib
 marcadores = ['ro','bo','go']
 # Conjunto de parâmetros de cada algoritmo para execução
@@ -37,10 +38,14 @@ for i in range(0,len(algoritmos)): # para cada algoritmo
     execucoes.append([])
     m = __import__ (algoritmos[i])
     toCall = getattr(m,algoritmos[i])
+    start_time = timeit.default_timer()
     for j in range(0,n): # Obter uma lista de 30 execuções cada uma com parametro dentro do AG de gerações/iterações
         print 'Executando o algoritmo \'%s\' da posição %i na vez %i' % (algoritmos[i],i,j)
         res = toCall(parametrizacao[i])
         execucoes[i].append(res)
+    print execucoes
+    elapsed = timeit.default_timer() - start_time
+    print 'Tempo de execucao das %i vezes: %f segundos' % (n,elapsed)
 
 print '----------------------'
 
@@ -58,7 +63,7 @@ for i in range(0,len(algoritmos)):
 
 plt.legend(loc='best')
 plt.xlabel('Iteracoes')
-plt.ylabel('$Media_{Valor}$')
+plt.ylabel('Media$_{v}$')
 plt.grid()
 plt.show()
 
