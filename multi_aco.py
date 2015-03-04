@@ -61,14 +61,6 @@ class Ant:
     def calculaDeltaTau(self,item):
         return float(1)/(self.calculaValor()+self.calculaPeso())
         
-        #mono @deprecated?
-        weightFormiga = 0
-        for i in range(0,len(self.tabu)):
-            if self.tabu[i] == 1:
-                weightFormiga = weightFormiga + M[i]
-        GWeightFormiga = float(Q)/weightFormiga
-        return M[item] * GWeightFormiga
-        
     def calculaPeso(self):
         peso = 0
         for i in range(0,len(self.tabu)):
