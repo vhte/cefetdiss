@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """
+INESC
 Non-Dominated Sorting Genetic Algorithm II
 Problema: Otimização mono-objetivo para maximização de IC com limite de custo
 Entrada: Equipamentos do Segmento
@@ -11,31 +12,76 @@ https://pythonhosted.org/ete2/tutorial/tutorial_trees.html
 http://stackoverflow.com/questions/2349991/python-how-to-import-other-python-files
 http://stackoverflow.com/questions/9542738/python-find-in-list
 
-@todo sorted() para ordenar os vetores!
+@todo Ao gerar pais e filhos, calcular o valor e peso e já deixar armazenado
+@todo Elitismo (pressão seletiva e o Sempre Deixar o Melhor da passada se > Melhor desta)
 """
-import d519
-import math # math.floor() para baixo round() para cima
-import sys
+import copy
+from random import randrange
+import mysql.connector
+
+cnx = mysql.connector.connect(user='root', password='root', database='cemig_d519')
+cursor = cnx.cursor()
 #sys.setrecursionlimit(100000)
 
 # PARAMETROS
 #Numero de gerações
-g = 100
+g = 500
 #Tamanho da população
-N = 100
+N = 500
 # Probabilidade crossover
 crossover = 90
 # Probabilidade mutacao
 mutacao = 5
+# Pressão seletiva (número de pais a entrar no torneio)
+pS = 2
+# Tamanho do arquivo
+tamArq = N
 
-W=500
-M=[57, 72, 51, 96, 82, 61, 65, 66, 53, 82, 61, 70, 54, 83, 66, 89, 83, 66, 52, 52, 54, 85, 62, 72, 87, 89, 68, 50, 71, 57, 73, 85, 58, 77, 75, 99, 71, 55, 84, 59, 82, 97, 99, 53, 73, 62, 93, 63, 89, 59, 84, 54, 93, 71, 78, 55, 69, 67, 57, 91, 82, 60, 78, 64, 54, 86, 66, 73, 56, 71, 87, 58, 53, 95, 92, 94, 53, 78, 72, 82, 74, 68, 55, 74, 82, 59, 68, 66, 64, 93, 76, 92, 88, 76, 54, 97, 78, 82, 60, 63, 84, 95, 58, 89, 77, 96, 89, 76, 77, 54, 79, 70, 98, 53, 76, 94, 79, 83, 63, 71, 99, 77, 64, 98, 52, 87, 50, 80, 51, 67, 56, 62, 62, 52, 51, 84, 89, 79, 52, 53, 57, 74, 92, 79, 84, 95, 55, 87, 76, 69, 90, 71, 79, 50, 68, 57, 96, 73, 63, 96, 80, 93, 72, 80, 88, 71, 73, 77, 99, 56, 76, 87, 58, 56, 52, 94, 83, 63, 68, 89, 60, 90, 78, 51, 68, 57, 79, 73, 57, 56, 83, 57, 57, 75, 77, 60, 70, 87, 87, 99, 54, 88, 80, 86, 74, 96, 84, 87, 82, 80, 82, 52, 99, 62, 77, 50, 52, 58, 90, 80, 80, 64, 82, 61, 70, 54, 82, 66, 70, 82, 90, 62, 69, 75, 69, 78, 50, 71, 81, 71, 95, 58, 69, 96, 51, 78, 70, 75, 87, 95, 87, 81, 67, 66, 72, 98, 73, 60, 97, 97, 70, 97, 54, 56, 69, 73, 85, 90, 89, 80, 93, 79, 63, 67, 99, 73, 74, 93, 94, 53, 65, 79, 65, 56, 78, 94, 60, 86, 64, 65, 75, 67, 85, 56, 99, 87, 92, 78, 74, 58, 55, 94, 89, 98, 84, 71, 53, 80, 52, 52, 51, 70, 57, 56, 84, 98, 60, 57, 89, 63, 51, 54, 77, 96, 92, 62, 64, 62, 75, 90, 71, 88, 55, 66, 72, 66, 71, 60, 93, 80, 96, 63, 92, 86, 60, 77, 57, 65, 67, 86, 78, 59, 65, 98, 81, 66, 90, 61, 94, 84, 52, 55, 66, 60, 65, 79, 76, 88, 95, 66, 65, 92, 62, 75, 99, 63, 92, 97, 97, 72, 90, 87, 64, 87, 68, 86, 72, 66, 82, 90, 76, 68, 55, 56, 83, 50, 83, 90, 67, 83, 56, 83, 87, 55, 73, 90, 53, 94, 54, 50, 62, 75, 98, 77, 96, 81, 78, 95, 52, 69, 94, 51, 53, 72, 72, 78, 68, 60, 97, 67, 77, 60, 88, 85, 73, 85, 65, 88, 56, 51, 73, 66, 75, 83, 91, 60, 56, 99, 81, 53, 50, 72, 94, 61, 54, 67, 63, 65, 73, 50, 85, 73, 70, 86, 59, 61, 57, 52, 66, 70, 90, 96, 53, 95, 50, 94, 73, 58, 71, 74, 90, 90, 61, 98, 93, 84, 69, 83, 62, 83, 77, 99, 52, 74, 86, 50, 85, 51, 55, 58]
-V=[164, 835, 881, 190, 440, 785, 685, 80, 630, 192, 649, 220, 538, 625, 722, 43, 587, 863, 183, 907, 616, 278, 485, 997, 208, 513, 951, 512, 699, 241, 772, 460, 79, 247, 527, 942, 993, 520, 566, 837, 749, 133, 835, 175, 751, 644, 331, 287, 903, 268, 758, 790, 345, 915, 287, 432, 38, 630, 347, 628, 915, 266, 652, 785, 240, 713, 946, 634, 253, 323, 949, 47, 685, 981, 493, 634, 418, 856, 866, 693, 159, 830, 501, 104, 59, 377, 732, 336, 666, 298, 673, 822, 36, 734, 68, 245, 629, 688, 723, 83, 363, 77, 103, 188, 700, 286, 33, 355, 716, 59, 427, 308, 735, 698, 266, 998, 259, 686, 865, 798, 16, 868, 551, 912, 97, 54, 614, 794, 714, 772, 316, 461, 387, 609, 41, 655, 936, 38, 998, 976, 41, 607, 930, 726, 593, 82, 654, 631, 36, 323, 120, 843, 823, 932, 240, 172, 15, 333, 559, 801, 753, 457, 408, 986, 46, 259, 620, 642, 782, 15, 955, 179, 230, 407, 660, 904, 532, 204, 485, 473, 219, 672, 888, 586, 492, 888, 500, 846, 489, 730, 539, 977, 559, 135, 46, 322, 417, 357, 237, 646, 95, 891, 17, 6, 785, 832, 850, 574, 512, 2, 854, 698, 79, 35, 395, 924, 108, 323, 666, 86, 168, 427, 847, 166, 218, 421, 655, 929, 885, 281, 535, 805, 839, 509, 899, 783, 237, 515, 634, 724, 201, 354, 891, 108, 526, 181, 957, 582, 397, 364, 558, 900, 679, 530, 53, 718, 906, 909, 963, 909, 957, 404, 996, 119, 968, 633, 21, 36, 52, 266, 466, 121, 82, 918, 538, 269, 625, 21, 858, 905, 41, 437, 358, 550, 294, 960, 417, 807, 24, 631, 80, 8, 170, 112, 801, 421, 856, 504, 203, 507, 361, 782, 378, 250, 617, 500, 663, 171, 267, 721, 288, 317, 344, 560, 693, 401, 188, 155, 423, 921, 341, 215, 439, 309, 320, 832, 770, 544, 138, 47, 480, 49, 464, 21, 133, 778, 133, 917, 105, 581, 234, 652, 942, 599, 355, 195, 206, 57, 186, 896, 543, 83, 259, 951, 84, 602, 696, 51, 788, 82, 256, 816, 210, 627, 618, 634, 49, 691, 305, 812, 952, 900, 635, 229, 835, 685, 828, 372, 666, 531, 958, 980, 744, 146, 446, 937, 918, 426, 359, 808, 237, 518, 376, 47, 971, 851, 447, 545, 211, 965, 230, 859, 83, 892, 247, 957, 779, 816, 144, 464, 182, 957, 964, 364, 919, 824, 352, 870, 410, 396, 547, 799, 737, 532, 506, 813, 57, 317, 871, 734, 947, 301, 738, 222, 587, 351, 534, 614, 922, 693, 885, 312, 344, 178, 294, 382, 322, 173, 577, 280, 127, 502, 359, 879, 543, 385, 276, 55, 494, 186, 100, 886, 497, 335, 521, 891, 622, 95, 617, 360, 413, 903, 72, 6, 331, 746, 684, 354, 325, 642, 191, 871, 327, 148, 503, 264, 424, 864, 946, 558, 657, 357, 727, 228, 339, 440, 819, 978, 129, 814]
+# Problema Knapsack a ser resolvido
+M = []
+V = []
+
+query = ("SELECT DISTINCT EquipamentoMT.ID AS ID, EquipamentoMT.IC AS IC, "
+    "IF(EquipamentoMT.TIPO_EQUIPAMENTO_ID != 1, EquipamentoNovo.CUSTO, (EquipamentoNovo.CUSTO/1000*CaboMT.COMPRIMENTO)) AS CUSTO "
+    "/*EquipamentoNovo.CUSTO,*/  "
+    "/*EquipamentoMT.TIPO_EQUIPAMENTO_ID */ "
+    "FROM EquipamentoMT  "
+    "JOIN Segmento ON EquipamentoMT.SEGMENTO_ID = Segmento.ID  "
+    "JOIN Alimentador ON Segmento.ALIMENTADOR_ID = Alimentador.ID  "
+    "JOIN EquipamentoNovo ON EquipamentoNovo.TIPO_EQUIPAMENTO_ID = EquipamentoMT.TIPO_EQUIPAMENTO_ID  "
+    "LEFT JOIN CaboMT ON EquipamentoMT.ID = CaboMT.ID  "
+    "WHERE Alimentador.ID = 13")
+    
+cursor.execute(query)
+for(ID,IC,CUSTO) in cursor:
+    M.append(CUSTO)
+    V.append((1-IC))
+for i in range(0,len(M)):
+    if M[i] > 0.1:
+        del(M[i])
+        del(V[i])
+        break
+for i in range(0,len(V)):
+    if V[i] > 0.1:
+        del(M[i])
+        del(V[i])
+        break
+    
 # Total itens
 n = len(M)
 
 # Fronteiras com o primeiro front
 F = [[]]
+
+R = [] #populacao pais + filhos
+
+# Arquivo de nao dominados
+A = []
+
+# Total SAIFI
+totalSAIFI = sum(M)
+# Total SAIDET_X
+totalSAIDET = sum(V)
 
 """
 Form a complex number.
@@ -45,7 +91,10 @@ real -- the real part (default 0.0)
 imag -- the imaginary part (default 0.0)
 """
 class Cromossomo:
-    alelos = [0]
+    alelos = [False]
+    valor = 0
+    peso = 0
+    preco = 0
     penalidade = 0
     rank = 0
     distance = -1
@@ -56,53 +105,56 @@ class Cromossomo:
     def __init__(self,n,novo=False):
         self.alelos = self.alelos * n        
         if novo:
-            return        
+            return
+        
         # Gerando posições de alelos aleatórias
-        for i in range(0,int(n*0.01)): # até 10% da solução inicial
-            self.alelos[d519.randrange(0,n)] = True
-
-    def calculaRho(self):
-        rho = 0
-        for i in range(0,n):
-            # calculo rho
-            if V[i]/float(M[i]) > rho:
-                rho = V[i]/float(M[i])
-        return rho
+        for i in range(0,int(n*0.5)): # até 50% da solução inicial
+            self.alelos[randrange(0,n)] = True
+            
+        # Calcula os valores iniciais
+        self.calculaValor()
+        self.calculaPeso()
+        self.calculaPreco()
                 
     def calculaPeso(self):
         peso = 0
         for i in range(0,len(self.alelos)):
-            if self.alelos[i] == 1:
+            if self.alelos[i]:
                 peso = peso + M[i]
-        return peso
+        self.peso = peso #- self.calculaFitness()
     
     def calculaValor(self):
         valor = 0
         for i in range(0,len(self.alelos)):
-            if self.alelos[i] == 1:
+            if self.alelos[i]:
                 valor = valor + V[i]
-        return valor
 
-    def calculaFitness(self):
-        fitness = 0
-        fitness = self.calculaValor() - self.penalidade
+        self.valor =  valor #- self.calculaFitness()
         
-        return fitness
+    def calculaPreco(self):
+        self.preco = sum(self.alelos)
+        """
+        preco = 0
+        for i in range(0,len(self.alelos)):
+            if self.alelos[i]:
+                preco = preco + C[i]
 
-    # @deprecated
-    def calculaPenalidade(self):
-        # Calcula a penalidade do problema e armazena (se houver)
-        if self.calculaPeso() < W:
-            self.penalidade = 0
-            return
+        self.preco =  preco #- self.calculaFitness()
+        """
+    def calculaRho(self):
+        rho = 0
+        for i in range(0,len(self.alelos)):
+            # calculo rho
+            if M[i] == 0:
+                continue
+            if V[i]/float(M[i]) > rho:
+                rho = V[i]/float(M[i])
+        return rho
 
-        totalPesoCrom = self.calculaPeso()
-        rho = self.calculaRho()
-        self.penalidade = rho * (totalPesoCrom - W)
-
+#tem erro aqui (28/01). Gerando filhos com mesmo id de pais
 def geraFilhos(populacao):
     # Verifico se vai entrar no crossover
-    r = d519.randrange(0,100)
+    r = randrange(0,100)
     if r < crossover:
         print 'Entrou crossover'
         # Entrou no crossover, seleciono nova população a partir de torneio binário para seleção de pais
@@ -112,11 +164,11 @@ def geraFilhos(populacao):
         vencedorAnterior = -1 # para não deixar que dois pais sejam o mesmo pai
         j = 0
         while j < N:
-            pai1Pos = d519.randrange(0,N)
-            pai2Pos = d519.randrange(0,N)
+            pai1Pos = randrange(0,N)
+            pai2Pos = randrange(0,N)
             # Nao deixo escolher o mesmo pai
             while pai1Pos == pai2Pos:
-                pai2Pos = d519.randrange(0,N)
+                pai2Pos = randrange(0,N)
                 
             # Verifico primeiro pelo rank. Se forem iguais, pela distância
             if populacao[pai1Pos].rank < populacao[pai2Pos].rank:
@@ -153,19 +205,23 @@ def geraFilhos(populacao):
                 vencedorAnterior = pai2Pos
             """
             
-            
             j = j+1
-        print 'torneio: '
-        print torneio
+        
+        
         # Crio vetor de nova populacao
         novaPop = []
         
         # Pais prontos em torneio, cruzamento de dois em dois
         j = 0
+        """
+        for z in range(0,len(populacao)):
+            print populacao[z].alelos
+        print  '---'
+        """
         while j < N:
             # Antes de trabalhar com o ponto de corte, verifico se existe um pai acima de j (caso em que tamPop é ímpar)
             if len(torneio) % 2 == 1 and j == N-1:
-                novaPop.append(populacao[j])
+                novaPop.append(copy.deepcopy(populacao[j]))
                 break # Sai do while, o pai sozinho pode sofrer no máximo mutação
 
             # Gero dois filhos
@@ -174,10 +230,9 @@ def geraFilhos(populacao):
             
            
             # Seleciono um ponto de cruzamento entre [0-n] (total alelos/itens)
-            pontoCorte = d519.randrange(0,(n)*2+1) # m+1 para englobar m
+            pontoCorte = randrange(0,(n)*2+1) # m+1 para englobar m
             
             ate = int(round(pontoCorte/float(2)))
-            
             #Gerando primeira metade de filho1 e filho2
             for k in range(0,ate):
                 filho1.alelos[k] = populacao[torneio[j]].alelos[k]
@@ -186,23 +241,46 @@ def geraFilhos(populacao):
             for k in range(ate,n):
                 filho1.alelos[k] = populacao[torneio[j+1]].alelos[k]
                 filho2.alelos[k] = populacao[torneio[j]].alelos[k]
+                
+            # Calcula valor e peso para filho1 e filho2
+            filho1.calculaValor()
+            filho1.calculaPeso()
+            filho1.calculaPreco()
+            filho2.calculaValor()
+            filho2.calculaPeso()
+            filho2.calculaPreco()
             
             # Adiciono os filhos gerados na nova população
             novaPop.append(filho1)
             novaPop.append(filho2)
+            
+            
+            """
+            print torneio
+            print populacao[torneio[j]].alelos
+            print populacao[torneio[j+1]].alelos
+            print ate
+            print n
+            print filho1.alelos
+            print filho2.alelos
+            raw_input('continue...')
+            """
             j = j+2
             
         # Inicio mutação
-        r = d519.randrange(0,100)
+        r = randrange(0,100)
         if r < mutacao:
             print 'Entrou mutação'
             # Para cada indivíduo de novaPop, seleciono um bit aleatório e inverto o valor
             for j in range(0,N):
-                bit = d519.randrange(0,n)
-                if novaPop[j].alelos[bit] == 1:
-                    novaPop[j].alelos[bit] = 0
+                bit = randrange(0,n)
+                if novaPop[j].alelos[bit]:
+                    novaPop[j].alelos[bit] = False
                 else:
-                    novaPop[j].alelos[bit] = 1
+                    novaPop[j].alelos[bit] = True
+                novaPop[j].calculaValor()
+                novaPop[j].calculaPeso()
+                novaPop[j].calculaPreco()
         # Fim mutação
         # Calcula penalidade dos filhos
         #for j in range(0,N):
@@ -212,25 +290,26 @@ def geraFilhos(populacao):
         populacao = novaPop
         
     # Retorna a população
-    return populacao
+    return copy.deepcopy(populacao)
     
 def domina(um,dois):
     """
     Verifica se 'um' domina 'dois' e retorna em bool
     """
     # Calcula f1 e f2
-    solucoesUm = [um.calculaValor(),um.calculaPeso()]
-    solucoesDois = [dois.calculaValor(),dois.calculaPeso()]
+    solucoesUm = [um.valor,um.peso,um.preco]
+    solucoesDois = [dois.valor,dois.peso,dois.preco]
     
     # Verifico se dois é dominado por um
-    if solucoesUm[0] > solucoesDois[0] and solucoesUm[1] < solucoesDois[1]:
+    if solucoesUm[0] > solucoesDois[0] and solucoesUm[1] > solucoesDois[1] and solucoesUm[2] < solucoesDois[2]:
         return True
     return False
     
     
-def fastNonDominatedSort(R):
+def fastNonDominatedSort():
     global F
-    
+    global R
+
     # Para cada solução de R, avalio se todas as outras soluções a dominam ou não
     for i in range(0,len(R)):
         R[i].S = []
@@ -241,23 +320,32 @@ def fastNonDominatedSort(R):
                 continue
             # Se solução i domina j
             if domina(R[i], R[j]):
-                R[i].S.append(R[j])
+                R[i].S.append(j)
             elif domina(R[j], R[i]):
                 R[i].n = R[i].n + 1
                 
         if R[i].n == 0:
             R[i].rank = 0 # 1
-            F[0].append(R[i])
-            
-    i = 0 # i =1
+            F[0].append(i)
+
+    """
+    i = 0 # i =1s
+    print 'F: ', 
+    print F
+    for i in range(0,len(R)):
+        print 'R[%d].S = ' % (i),
+        print R[i].S
+        print 'R[%d].n = %d' % (i,R[i].n)
+    """
+    i=0
     while len(F[i]) != 0: #while True F[i]
         Q = []
         for j in range(0,len(F[i])):
-            for k in range(0,len(F[i][j].S)):
-                F[i][j].S[k].n = F[i][j].S[k].n - 1
-                if F[i][j].S[k].n == 0:
-                    F[i][j].S[k].rank = i+1
-                    Q.append( F[i][j].S[k])
+            for k in range(0,len(R[F[i][j]].S)):
+                R[R[F[i][j]].S[k]].n = R[R[F[i][j]].S[k]].n - 1
+                if R[R[F[i][j]].S[k]].n == 0:
+                    R[R[F[i][j]].S[k]].rank = i+1
+                    Q.append(R[F[i][j]].S[k])
         i = i+1
         
         # Verifica se existe F[i]. Se não, cria
@@ -266,96 +354,73 @@ def fastNonDominatedSort(R):
         
         F[i] = Q
     #print F
-       
-"""
-def quicksort(v, objetivo):
-    if len(v) <= 1:
-        return v # uma lista vazia ou com 1 elemento ja esta ordenada
-    less, equal, greater = [], [], [] # cria as sublistas dos maiores, menores e iguais ao pivo
-    pivot = v[0] # escolhe o pivo. neste caso, o primeiro elemento da lista
-    for x in v:
-        # adiciona o elemento x a lista correspondeste
-        if objetivo == 0: # Valor
-            if x.calculaValor() < pivot.calculaValor():
-                less.append(x)
-            elif x.calculaValor() == pivot.calculaValor():
-                equal.append(x)
-            else:
-                greater.append(x)
-        elif objetivo == 1: # Peso
-            if x.calculaPeso() < pivot.calculaPeso():
-                less.append(x)
-            elif x.calculaPeso() == pivot.calculaPeso():
-                equal.append(x)
-            else:
-                greater.append(x)
-    return quicksort(less, objetivo) + equal + quicksort(greater, objetivo)
-    # concatena e retorna recursivamente
-"""
+    
+    
     
 def sortObj(v, objetivo):
-    for j in range(1, len(v)):
-        chave = v[j]
-        i = j - 1
-        
-        if objetivo == 'valor':            
-            while i >= 0 and v[i].calculaValor() > chave.calculaValor():
-                v[i + 1] = v[i]
-                i -= 1
-            v[i + 1] = chave
-        elif objetivo == 'peso':
-            while i >= 0 and v[i].calculaPeso() > chave.calculaPeso():
-                v[i + 1] = v[i]
-                i -= 1
-            v[i + 1] = chave
-            
-    return v
+    if objetivo == 'valor':
+        return sorted(v, key=lambda pos: R[pos].valor)
+    elif objetivo == 'peso':
+        return sorted(v, key=lambda pos: R[pos].peso)
 
 def crowdingDistanceAssignment(pop):
+    global R
     l = len(pop)
+    
+    # Se houver apenas um elemento, nada a fazer, é ele
+    if l == 1:
+        return pop
     
     # Para cada i, setar distancia igual a 0
     for i in range(0,l):
-        pop[i].distance = 0
+        R[pop[i]].distance = 0
     
     # para cada objetivo realizar os procedimentos
     # Estou fazendo os dois na mão mesmo
     
     # Valor
     pop = sortObj(pop, 'valor')
-    pop[0].distance = float('inf')
-    pop[l-1].distance = float('inf')
-    fmin = pop[0].calculaValor()
-    fmax = pop[l-1].calculaValor()
-    for i in range(1,l-1):
-        pop[i].distance = pop[i].distance + (pop[i+1].calculaValor() - pop[i-1].calculaValor()) / (fmax - fmin)
+    R[pop[0]].distance = float('inf')
+    R[pop[l-1]].distance = float('inf')
+    fmin = R[pop[0]].valor
+    fmax = R[pop[l-1]].valor
+    print fmin,fmax,(fmax - fmin),l
+    
+    if fmin != fmax:
+        for i in range(1,l-1):
+            R[pop[i]].distance = R[pop[i]].distance + (R[pop[i+1]].valor - R[pop[i-1]].valor) / (fmax - fmin)
         
     # Peso
     pop = sortObj(pop, 'peso')
-    pop[0].distance = float('inf')
-    pop[l-1].distance = float('inf')
-    fmin = pop[0].calculaPeso()
-    fmax = pop[l-1].calculaPeso()
-    for i in range(1,l-1):
-        pop[i].distance = pop[i].distance + (pop[i+1].calculaPeso() - pop[i-1].calculaPeso()) / (fmax - fmin)
+    R[pop[0]].distance = float('inf')
+    R[pop[l-1]].distance = float('inf')
+    fmin = R[pop[0]].peso
+    fmax = R[pop[l-1]].peso
+    if fmin != fmax:
+        for i in range(1,l-1):
+            R[pop[i]].distance = R[pop[i]].distance + (R[pop[i+1]].peso - R[pop[i-1]].peso) / float(fmax - fmin)
     
     return pop
 
 def crowdedComparison(v):
-    for j in range(1, len(v)):
-        chave = v[j]
-        i = j - 1
-        # v[i].rank >= chave.rank or (v[i].rank != chave.rank or v[i].distance <= chave.distance):
-        while i>= 0 and (v[i].rank > chave.rank or (v[i].rank == chave.rank or v[i].distance < chave.distance)):
-        #while i>= 0 and (v[i].rank < chave.rank or (v[i].rank == chave.rank or v[i].distance > chave.distance)):
-            v[i + 1] = v[i]
-            i -= 1
-        v[i + 1] = chave
+    global R
+    for i in range(0,len(v)):
+        for j in range(0,len(v)):
+            if i == j:
+                continue
+            
+            if (R[v[i]].rank < R[v[j]].rank) or (R[v[i]].rank == R[v[j]].rank and R[v[i]].distance > R[v[j]].distance):
+            #if (R[v[i]].rank > R[v[j]].rank) or (R[v[i]].rank == R[v[j]].rank and R[v[i]].distance <= R[v[j]].distance):
+                # trocam
+                tmp = v[i]
+                v[i] = v[j]
+                v[j] = tmp
     return v
         
 
 def nsgaII():
     global F
+    global R
     # Gera a população inicial randômica Pt
     print 'Iniciou o algoritmo'
     # Crio os cromossomos e gero populacao 0
@@ -375,30 +440,56 @@ def nsgaII():
         print '##### GERACAO %d #####' % (t)
         # Combina os pais com filhos e se torna Rt
         R = pais + filhos
-        print 'Combinou pais e filhos. Tamanho: %d' % (len(R))
         
+        for i in range(0,len(R)):
+            print 'R[%d].valor = %f R[%d].peso = %f' % (i, R[i].valor, i, R[i].peso)
+        """
+        # verificando se tem um individuo duplicado
+        for i in range(0,len(R)):
+            for j in range(0,len(R)):
+                if i == j:
+                    continue
+                if id(R[i]) == id(R[j]):
+                    print 'id %d duplicado' % (id(R[i]))
+                    raw_input('continue...')
+        """
+        """
+        for i in range(0,len(R)):
+            print R[i]
+            print 'Individuo %d' % (i)
+            print 'ID: %s SAIDI: %f SAIDET_X: %f' % (id(R[i]), R[i].calculaValor(), R[i].calculaPeso())
+        """
+        print 'Combinou pais e filhos. Tamanho: %d' % (len(R))
         # Fast non-dominated sort em Rt (atualiza F)
         F =[[]]
-        fastNonDominatedSort(R)
-        print 'Executou fastNonDominatedSort e atualizou F'
+        fastNonDominatedSort()
         
+        print 'Executou fastNonDominatedSort e atualizou F'
+        c = 0
+        for i in range(0,len(F)):
+            c = c + len(F[i])
+        print 'Tamanho de todas as fronteiras de F: %d' % (c)
+        if c < len(R):
+            for i in range(0,len(R)):
+                print R[i]
+                print 'Individuo %d' % (i)
+                print 'ID: %s SAIDI: %f SAIDET_X: %f' % (id(R[i]), R[i].valor, R[i].peso)
+            raw_input('|F| < |R|')
         # Inicia próximos pais Pt+1
         pais = []
         i = 0 # i = 1 mas por causa do indice começa do 0
         
         # Enquanto Pt+1 + Fi for menorigual ao tamanho da população
-        
         while (len(pais)+len(F[i])) <= N:
             # crowding-distance assignment(Fi)
-            print 'len(F[i]): %d' % (len(F[i])) # TA VINDO 0 AQUI!!!!!
+            print 'Executando crowdingDistanceAssignment. N: %d e len(pais) + len(F[%d]) = %d' % (N,i,len(pais)+len(F[i]))
             F[i] = crowdingDistanceAssignment(F[i])
-            print 'Executou crowdingDistance'
-
             # Pt+1 = Pt+1 U Fi
-            pais = pais + F[i]
+            for j in range(0,len(F[i])):
+                pais.append(R[F[i][j]])
+            #pais = pais + F[i]
             
             i = i+1
-        
             
         # Ordenar Fi com Crowded comparison operator
 
@@ -409,30 +500,90 @@ def nsgaII():
         # Adiciono poucos do seguinte front para preencher os faltantes de até N
         j = 0
         while len(pais) < N:
-            pais.append(F[i][j])
+            pais.append(R[F[i][j]]) # os novos pais estao convergindo....
             j = j+1
         # Pt+1 = Pt+1 U Fi[1:(N-|Pt+1|)]
-        print 'Pais'
+        
         # Qt+1 = nova população a partir de Pt+1
         filhos = geraFilhos(pais)
         
         t = t+1
         
-    # Apresento os pais
-    print pais
-    for i in range(0,len(pais)):
-        print 'Pai %d: Valor: %f Peso: %f' % (i, pais[i].calculaValor(), pais[i].calculaPeso())
+        """
+        # Fim iteracao, atualizacao de arquivo
+        for i in range(0,len(F[0])):
+            existe = False
+            # Adiciono o que dominou somente se nao existir alguem com mesmo valor e peso igual a ele
+            for j in range(0,len(A)):
+                if R[F[0][i]].alelos == A[j].alelos:
+                    existe = True
+                    break
+            if existe:
+                continue
+            A.append(R[F[0][i]])
+        """
+
         
-    for i in range(0,len(F)):
-        print 'F%d size: %d' % (i,len(F[i]))
-        print 'F%dV = [ ' % (i),
-        for j in range(0,len(F[i])):
-            print '%d, ' % (F[i][j].calculaValor()),
-        print ' ]'
+    # Apresento o arquivo final
+    print F[0] # F[0] converge :(
+    """
+    print 'Iniciando os cálculos dos não dominados. Isto pode demorar um pouco...'
+    retirar = []
+    for i in range(0,len(A)):
+        for j in range(0,len(A)):
+            if domina(A[i], A[j]) or A[j].valor <= 0:
+                retirar.append(j)
+    print set(retirar)
+    # retiro os dominados
+    for index in sorted(set(retirar), reverse=True):
+        del A[index]
         
-        print 'F%dW = [ ' % (i),
-        for j in range(0,len(F[i])):
-            print '%d, ' % (F[i][j].calculaPeso()),
-        print ' ]',
-        print ' '
+    for i in range(0,len(A)):
+        print 'Arquivo %d (%i): Valor: %f Peso: %f' % (i, id(A[i]), A[i].valor, A[i].peso)
+    """
+    
+    # Preenchendo A com os tamArq primeiros invididuos
+    A = []
+    i = 0
+    j = 0
+    while len(A) < tamArq:
+            A.append(R[F[i][j]])
+            
+            if len(F[i]) == j+1:
+                i = i+1
+                j = 0
+            else:
+                j = j+1
+    
+    print 'saidet_x = [ ',
+    """
+    for j in range(0,len(F[0])):
+        print '%.20f, ' % (R[F[0][j]].calculaValor()),
+    """
+    for j in range(0,len(A)):
+        print '%.20f, ' % (A[j].valor/float(totalSAIDET)),
+    
+    print ' ]'
+    
+    print 'saifi = [ ',
+    """
+    for j in range(0,len(F[0])):
+        print '%.20f, ' % (R[F[0][j]].calculaPeso()),
+    """
+    for j in range(0,len(A)):
+        print '%.20f, ' % (A[j].peso/float(totalSAIFI)),
+    
+    print ' ]'
+    
+    print 'custo = [ ',
+    """
+    for j in range(0,len(F[0])):
+        print '%.20f, ' % (R[F[0][j]].calculaPeso()),
+    """
+    for j in range(0,len(A)):
+        print '%.20f, ' % (A[j].preco),
+    
+    print ' ]'
+    
+    
 nsgaII()

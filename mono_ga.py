@@ -383,7 +383,7 @@ def mono_ga(params):
             best = [j, valor, peso]
     if best[0] == -1:
         print 'Nao obteve solução factível ):'
-        raw_input('Nao obteve solucao factivel')
+        raw_input('Nao obteve solucao factivel. Pressione qualquer tecla para terminar ...')
         return 0
     
     if debug:
