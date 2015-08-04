@@ -20,10 +20,6 @@ http://stackoverflow.com/questions/9542738/python-find-in-list
 """
 
 import d519
-V = []
-M = []
-W = 0
-Q = 0
 
 class Ant:
     """
@@ -31,7 +27,6 @@ class Ant:
     Os itens estão representados pelos vetores M e V e os ferormônios atualizados também de acordo com eles
     """
     tabu = [0]
-    allowed = [1]
     valor = 0
     peso = 0
     parou = False
@@ -42,12 +37,10 @@ class Ant:
     # Inicia a formiga colocando ela em um determinado item já (posição)
     def __init__(self,n,primeiraGeracao):
         self.tabu = self.tabu * n
-        self.allowed = self.allowed * n
         # Colocando a formiga em uma posição (item) aleatória para começar
         if primeiraGeracao:
             pos = d519.randrange(0,n)
             self.tabu[pos] = 1
-            self.allowed[pos] = 0
             self.valor = self.valor + V[pos]
             self.peso = self.peso + M[pos]
         
@@ -123,11 +116,12 @@ def mono_aco(params):
     beta = params[6]
     # Permanencia do ferormonio 
     rho = params[7]
+    # Posições das soluções intermediárias para justificar o ajuste de parâmetros
+    intermediarias = params[11]
+    sIntermediarias = []
     # Lista de ferormonio em cada item
     ferormonio = [C] * n
     ferormonioDelta = [0] * n
-    
-    totalParou = 0
     
     melhoresGeracao = [] # a resposta do algoritmo, para cada geração uma única resposta será enviada
     
@@ -157,77 +151,103 @@ def mono_aco(params):
     if debug:
         print '   Calculou ferormonioDelta de cada formiga para cada item'
         
+    # Variável de controle para caso 10 tentativas sem sucesso de inserção, utilizar a última solução como resto
+    tentativas = m*5
+        
     # Inicializando  conunto solucoes (colonias)
     for i in range(0,g):
+        # Verifica se exariu tentativas e, se positivo, completa o restante das soluções e sai do loop
+        if tentativas <= 0:
+            break
         if debug:
             print 'Inicializando colônia %d' % (i)
-            
-        if i!=0:
-            ants = []
-            for j in range(0,m):
-                ants.append(Ant(n,False))
         
-        while totalParou < m:
-            # para cada formiga
-            for j in range(0,m):
-                if debug:
-                    print '   Iniciando formiga %d da colônia %d' % (j,i)
-                # selecionar o próximo item (j) baseado na equacao de probabilidade
-                # Crio um vetor auxiliar com todas as posições de allowed ordenadas por P de forma ascendente
-                aux = [] * len([x for x in ants[j].allowed if x == 1])
-                somatorioAllowed = 0
-                # Somatório do denominador com allowed da formiga j
-                for l in range(0,n):
-                    if ants[j].allowed[l] == 1:
-                        somatorioAllowed = somatorioAllowed + pow(float(V[l])/M[l], beta) * pow(ferormonio[l], alpha)
-                # Calculo a probabilidade para todos os itens de allowed (pois tabu ja estao dentro do "caminho" da formiga)
-                if debug:
-                    print '   Calculando a lista P[] com as probabilidades de escolha'
-                for k in range(0,n):
-                    if ants[j].tabu[k] == 1: # Apenas em allowed
-                        continue
-                    # adiciono o indice do item em aux
-                    aux.append(k)
-                    
-                    # Probabilidade do item k ser escolhido
-                    P[k] = float((pow(ferormonio[k],alpha) * pow(float(V[k])/M[k], beta))) / (somatorioAllowed)
-                #print P
-                # Ordeno aux do menor P[k] para maior
-                # Aqui vai depender do tamanho de itens a serem ordenados. Usando quicksort O(n^2) pior caso
-                #print [P[x] for x in P if x in aux]
-                #print aux
-                #print '---'
-                aux = quicksort(aux, [P[x] for x in P if x in aux]) #  P[x] para value
-                #print aux
-                #raw_input('teste')
+        # para cada formiga
+        for j in range(0,m):
+            if debug:
+                print '   Iniciando formiga %d da colônia %d' % (j,i)
+            # selecionar o próximo item (j) baseado na equacao de probabilidade
+            # Crio um vetor auxiliar com todas as posições permitidas ordenadas por P de forma ascendente
+            aux = [] * len([x for x in ants[j].tabu if x == 0])
+            somatorioAllowed = 0
+            # Somatório do denominador com allowed da formiga j
+            for l in range(0,n):
+                if ants[j].tabu[l] == 0:
+                    somatorioAllowed = somatorioAllowed + pow(float(V[l])/M[l], beta) * pow(ferormonio[l], alpha)
+            # Calculo a probabilidade para todos os itens de allowed (pois tabu ja estao dentro do "caminho" da formiga)
+            if debug:
+                print '   Calculando a lista P[] com as probabilidades de escolha'
+            for k in range(0,n):
+                if ants[j].tabu[k] == 1: # Apenas em allowed
+                    continue
+                # adiciono o indice do item em aux
+                aux.append(k)
                 
-                # Com as probabilidades montadas, gerar a estrutura para roleta
-                selecionado = roleta(aux, P)
-                if debug:
-                    print '   Selecionou o item da posição %d na roleta' % (selecionado)
+                # Probabilidade do item k ser escolhido
+                P[k] = float((pow(ferormonio[k],alpha) * pow(float(V[k])/M[k], beta))) / (somatorioAllowed)
+            #print P
+            # Ordeno aux do menor P[k] para maior
+            # Aqui vai depender do tamanho de itens a serem ordenados. Usando quicksort O(n^2) pior caso
+            #print [P[x] for x in P if x in aux]
+            #print aux
+            #print '---'
+            aux = quicksort(aux, [P[x] for x in P if x in aux]) #  P[x] para value
+            #print aux
+            #raw_input('teste')
+            
+            # Com as probabilidades montadas, gerar a estrutura para roleta
+            selecionado = roleta(aux, P)
+            if debug:
+                print '   Selecionou o item da posição %d na roleta' % (selecionado)
+
+            """
+            # inviável                        
+            # Se não há como inserir o item por causa da restrição, retira um aleatoriamente
+            # Segunda opção: pegar o segundo da roleta, o terceiro e assim por diante...
+            tentativas = 0 
+            
+            while ants[j].peso + M[selecionado] > W and tentativas < int(n*0.05):
+                # Recupero posição de quem esta no tabu
+                tabu = [k for k, l in enumerate(ants[j].tabu) if l == 1]
+                tmp = d519.randrange(0,len(tabu))
+            
+                ants[j].tabu[tabu[tmp]] = 0
+                ants[j].valor = ants[j].valor - V[tabu[tmp]]
+                ants[j].peso = ants[j].peso - M[tabu[tmp]]
                 
-                tentativas = 0
-                while ants[j].peso + M[selecionado] > W and tentativas < int(n*0.05):
-                    # Adição inválida, rodo a roleta de novo até encontrar alguem ou 5% sem encontrar ninguém (convergência)
-                    selecionado = roleta(aux, P)
-                    tentativas = tentativas +1
+                tentativas = tentativas + 1
+            """
+            # Se não consegue adicionar o item, nada a fazer
+            if ants[j].peso + M[selecionado] > W:
+                tentativas = tentativas - 1
+                continue
+            
+            # Retirar de allowed e adicionar em tabu na formiga j
+            ants[j].tabu[selecionado] = 1
+            ants[j].valor = ants[j].valor + V[selecionado]
+            ants[j].peso = ants[j].peso + M[selecionado]
                 
-                if ants[j].peso + M[selecionado] <= W:
-                    # Retirar de allowed e adicionar em tabu na formiga j
-                    ants[j].allowed[selecionado] = 0
-                    ants[j].tabu[selecionado] = 1
-                    ants[j].valor = ants[j].valor + V[selecionado]
-                    ants[j].peso = ants[j].peso + M[selecionado]
-                    
-                    # Atualizo o ferormonioDelta daquele item
-                    ferormonioDelta[selecionado] = ferormonioDelta[selecionado] + ants[j].calculaDeltaTau(selecionado)
+            # Atualizo o ferormonioDelta daquele item
+            ferormonioDelta[selecionado] = ferormonioDelta[selecionado] + ants[j].calculaDeltaTau(selecionado)
+            
+                
+            """
+            for k in range(0,10):
+                alelo = d519.randrange(0,n)
+                if ants[j].tabu[alelo]:
+                    ants[j].valor = ants[j].valor - V[alelo]
+                    ants[j].peso = ants[j].peso - M[alelo]
+                    ants[j].tabu[alelo] = 0
+                    ants[j].allowed[alelo] = 1
                 else:
-                    # A formiga ja nao aceita mais nada. Não deve continuar a selecionar artigos. Parou!
-                    ants[j].parou = True
-                    totalParou = totalParou + 1
-               
-                if debug:
-                    print '   Parcial Colonia %d Formiga %d: %f' % (i, j,ants[j].valor)
+                    ants[j].valor = ants[j].valor + V[alelo]
+                    ants[j].peso = ants[j].peso + M[alelo]
+                    ants[j].tabu[alelo] = 1
+                    ants[j].allowed[alelo] = 0
+            """
+           
+            if debug:
+                print '   Parcial Colonia %d Formiga %d: %f' % (i, j,ants[j].valor)
                     
         # Depois que todas as formigas ja visitaram os artigos, atualiza ferormonio (evaporação) para próxima geração
         for k in range(0,n):
@@ -237,11 +257,6 @@ def mono_aco(params):
             #print 'Ferormonio do artigo %d agora é %f' % (k, ferormonio[k])
             
             #raw_input('...')
-                    
-        # Reseto para próxima geração
-        totalParou = 0
-        for k in range(0,m):
-            ants[k].parou = False
             
         
             
@@ -250,21 +265,32 @@ def mono_aco(params):
         for j in range(0,n):
             #print ferormonio[j]
             ferormonioDelta[j] = 0
-        #raw_input('Continuar')
+       
         
         # Verifico quem é o melhor para adicionar em melhoresGeracao
         # Imprime melhor solução FACTÍVEL
         best = [-1, 0, 0]
+        lastBest = 0
         for j in range(0,m):
             if ants[j].valor > best[1] and ants[j].peso <= W:
                 best = [j, ants[j].valor, ants[j].peso]
         if best[0] == -1:
             if debug:
                 print 'Nao obteve solução factível ):'
-            melhoresGeracao.append(0)
+            melhoresGeracao.append(lastBest)
         else:
             melhoresGeracao.append(best[1])
+            lastBest = best[1]
+            
+        # Verifica se é para inserir nas soluções intermediárias
+        if i in intermediarias:
+                sIntermediarias.append(lastBest)
     
+    # Verifica se completou número de colônias. Se não, completa com a última solução
+    while len(melhoresGeracao) < g:
+        melhoresGeracao.append(melhoresGeracao[len(melhoresGeracao)-1])
+        if len(melhoresGeracao) in intermediarias:
+                sIntermediarias.append(melhoresGeracao[len(melhoresGeracao)-1])
     # exibir resultado de todas as formigas e achar a melhor
     melhor = [0 ,0]
     for i in range(0,m):
@@ -277,5 +303,4 @@ def mono_aco(params):
         print 'Lista de artigos da melhor formiga: '
         print ants[melhor[0]].tabu
     
-    return melhoresGeracao
-#print mono_aco([False])
+    return [melhoresGeracao, sIntermediarias]

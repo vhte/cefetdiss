@@ -32,6 +32,8 @@ def mono_ils(params):
     meuCusto = params[5]#1500
     custos = params[6]
     ics = params[7]
+    intermediarias = params[8]
+    sIntermediarias = []
     
     ################ METODOS ###############
     
@@ -53,35 +55,45 @@ def mono_ils(params):
     # Os vizinhos sao sempre trocas. S
     def buscaLocal(solucaoCorrente):
         # Rodo iterMax vezes
-        i = 0
-        while i < iterMaxBL:
-            i = i+1
+        k = 0
+        # Armazeno o valor e peso atuais para não recalcular a todo momento
+        valorCorrente = calculaValor(solucaoCorrente)
+        valorBL = valorCorrente
+        pesoBL = calculaPeso(solucaoCorrente)
+        
+        # Encontrando um vizinho k qualquer
+        s0 = d519.copy.copy(solucaoCorrente)
+        
+        while k < iterMaxBL:
+            k = k+1
             
-            # Encontrando um vizinho k qualquer
-            s0 = d519.copy.deepcopy(solucaoCorrente)
-            
-            j = 0
-            while j < iterMaxBL_P: # Altera UMA posição
-                # Mudo uma posicao
+            #j = 0
+            #while j < iterMaxBL_P: # Altera UMA posição
+            # Mudo uma posicao
+            pos = d519.randrange(0,len(s0))
+            while s0[pos]:
                 pos = d519.randrange(0,len(s0))
-                while s0[pos]:
-                    pos = d519.randrange(0,len(s0))
-    
-                s0[pos] = True
+
+            s0[pos] = True
+            valorBL = valorBL + ics[pos]
+            pesoBL = pesoBL + custos[pos]
                 
-                j = j+1
+            #j = j+1
             
             # RESTRIÇÃO: Verificando se a soma das trocas são válidas
-            pesos0 = calculaPeso(s0) 
-            if pesos0 > meuCusto:
+            if pesoBL > meuCusto:
+                s0[pos] = False
+                valorBL = valorBL - ics[pos]
+                pesoBL = pesoBL - custos[pos]
+                # Voltou solução antiga, nada a fazer
                 continue
             
             # Se sim, entao verifico qual tem IC melhor
             # Usar >= aqui pode implicar em loop infinito quando muito próximo do ótimo
-            if pesos0 > calculaValor(solucaoCorrente):
-                i=0 #reseto a iteração
-                solucaoCorrente = d519.copy.deepcopy(s0) # nova solução corrente
-    
+            if valorBL > valorCorrente:
+                k=0 #reseto a iteração
+                solucaoCorrente = d519.copy.copy(s0) # nova solução corrente
+                s0 = d519.copy.copy(solucaoCorrente)
         return solucaoCorrente #[0]*len(solucaoCorrente)
         
     ################# MAIN #################    
@@ -89,7 +101,7 @@ def mono_ils(params):
         
     # Perturbacao: x% da solucao
     p = int(round(len(ics)*pPert))
-    if p <= 0:
+    if p < 1:
         p = 1 # Há pelo menus uma pertubação
     
     # Monto a solucao de forma binaria
@@ -98,7 +110,7 @@ def mono_ils(params):
     # Gerando a solução inicial: Aleatória ou Gulosa. Nao posso permitir que a solucao inicial extrapole muito a restricao, senao a perturbacao nunca encontrara uma solucao factivel
     
     # Aleatório
-    aleatorio = int(len(ics)*0.5)
+    aleatorio = int(len(ics)*0.1)
     for i in range(0,aleatorio):
         s[d519.randrange(0,len(ics))] = True
     """ 
@@ -128,7 +140,7 @@ def mono_ils(params):
     while i < iterMaxILS:
         #print 'Loop ILS %d' % (i)
         # Perturbacao: Gero um número n <= totalEquips*0.1 e esta será a qte de trocas a ser feita
-        perturbacao = d519.copy.deepcopy(s)
+        perturbacao = d519.copy.copy(s)
         for j in range(0,p+1): # o segundo parametro pega ele -1. Se sao 6 equips, só iria pegar até o 5o
             pos = d519.randrange(0,len(ics))
             if perturbacao[pos]:
@@ -148,8 +160,11 @@ def mono_ils(params):
             if debug:
                 print 'Peso (%i) é maior que meuCusto (%i)' % (calculaPeso(temp),meuCusto)
                 
-            i = i+1 # Demora muito se permitir que a iteração só suba com solução factível
             melhoresGeracao.append(calculaValor(s))
+            if i in intermediarias:
+                sIntermediarias.append(calculaValor(s))
+                
+            i = i+1 # Demora muito se permitir que a iteração só suba com solução factível
             continue
         
         # Avalio o melhor
@@ -158,8 +173,12 @@ def mono_ils(params):
         if valorT > valorS:
             s = d519.copy.deepcopy(temp)
             melhoresGeracao.append(valorT)
+            if i in intermediarias:
+                sIntermediarias.append(valorT)
         else:
             melhoresGeracao.append(valorS)
+            if i in intermediarias:
+                sIntermediarias.append(valorS)
         i = i+1
         #print calculaValor(temp)
         #print calculaPeso(temp)
@@ -180,5 +199,5 @@ def mono_ils(params):
     cursor.close()
     cnx.close()
     """
-    #return [calculaValor(s, ics), calculaPeso(s, custos)]
-    return melhoresGeracao
+    #return [melhoresGeracao, intermediarias]
+    return [melhoresGeracao, sIntermediarias]

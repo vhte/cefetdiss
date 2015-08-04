@@ -18,7 +18,7 @@ import timeit
 import sys
 from multiprocessing import Pool
 
-cluster = True
+cluster = False
 
 if not cluster:
     import matplotlib.pyplot as plt
@@ -34,11 +34,14 @@ pool = Pool(processes=None) # If processes is None then the number returned by c
 
 # Quantidade de vezes a ser executado
 n = 30
+# Solucoes intermediarias a salvar
+interS = [20,30,40,50]
 
 # Problema Knapsack a ser resolvido
-W = 200 # ACO com problema relaxado, de cara ja acha solucao boa, problema muito restrito, outros ganham (muito) rapidamente
+W = 100 # ACO com problema relaxado, de cara ja acha solucao boa, problema muito restrito, outros ganham (muito) rapidamente
 M = []
 V = []
+
 
 if not cluster:
     query = ("SELECT DISTINCT EquipamentoMT.ID AS ID, EquipamentoMT.IC AS IC, "
@@ -50,39 +53,44 @@ if not cluster:
         "JOIN Alimentador ON Segmento.ALIMENTADOR_ID = Alimentador.ID  "
         "JOIN EquipamentoNovo ON EquipamentoNovo.TIPO_EQUIPAMENTO_ID = EquipamentoMT.TIPO_EQUIPAMENTO_ID  "
         "LEFT JOIN CaboMT ON EquipamentoMT.ID = CaboMT.ID  "
-        "WHERE Alimentador.ID = 2")
+        "WHERE Alimentador.ID = 5")
         
     cursor.execute(query)
     for(ID,IC,CUSTO) in cursor:
         M.append(CUSTO)
         V.append((1-IC))
+    cursor.close()
 else: # Cluster
     M = []
     V = [] # Completar apenas no cluster
-
+print sum(V)
+print sum(M)
+raw_input('pause')
+'''
 print M
 print V
-raw_input('')
+raw_input('wait')
+'''
 #Configuracoes ILS
-iterMaxILS = 500
-iterMaxBL = 30
+iterMaxILS = 14000
+iterMaxBL = 10
 pPert = 0.001
 iterMaxBL_P = 1
 
 # Configuracoes AG
-geracoes = 500
-tampop = 50
+geracoes = 3500
+tampop = 300
 crossover = 90
 mutacao = 5
 pressaoSel = 3
 
 #  Configuracoes ACO
-colonias = 10
+colonias = 3000
 numForm = 10
 # Constante inicial de ferormonio
 C = 100
 Q = d519.randrange(11,100)
-alpha = 1
+alpha = 1 # deixar alpha mais forte, aumenta a força do ferormônio, porém retirar alelos aleatórios sem mudar o ferormônio é cagada
 beta = 5
 rho = 0.3
 #M = [92,4,43,83,84,68,92,82,6,44,32,18,56,83,25,96,70,48,14,58]
@@ -93,27 +101,42 @@ rho = 0.3
 #algoritmos = ['mono_ils','mono_ga', 'mono_aco']
 #algoritmos = [ 'mono_ga','mono_ga','mono_ga','mono_ga', 'mono_ga']
 #algoritmos = ['mono_ils', 'mono_ils','mono_ils','mono_ils']
-algoritmos = ['mono_aco','mono_aco','mono_aco','mono_aco']
+#algoritmos = ['mono_aco','mono_aco','mono_aco','mono_aco']
 #algoritmos = ['mono_aco']
+#algoritmos = ['mono_ga', 'mono_ga', 'mono_ga', 'mono_ga']
+#algoritmos = ['mono_ils']
+algoritmos = ['mono_ga']
 
 # nomes a serem plotados (caso False, o nome do algoritmo)
 #nomesAlg = ['mono_ils', 'mono_ga', 'mono_aco']
 #nomesAlg = [ 'mono_ga_pop100', 'mono_ga_pop150', 'mono_ga_pop200', 'mono_ga_pop250', 'mono_ga_pop300']
-#nomesAlg = ['mono_ils_0001P_20BL_3V', 'mono_ils_0001P_20BL_6V', 'mono_ils_0001P_20BL_9V', 'mono_ils_0001P_20BL_12V']
-nomesAlg = ['mono_aco_1_1', 'mono_aco_1_3', 'mono_aco_3_1', 'mono_aco_1_5', 'mono_aco_3_5', 'mono_aco_5_3']
+#nomesAlg = ['mono_ils_7000P', 'mono_ils_8000P', 'mono_ils_9000P', 'mono_ils_10000P']
+#nomesAlg = ['mono_aco_1_5', 'mono_aco_5_1', 'mono_aco_3_3', 'mono_aco_2_4']
+#nomesAlg = ['mono_aco']
+#nomesAlg = ['mono_ga_p100', 'mono_ga_p150', 'mono_ga_p200', 'mono_ga_p300']
+#nomesAlg = ['mono_ils']
+nomesAlg = ['mono_ga']
 
 # lista de marcadores do matplotlib
 marcadores = ['b-','g-','r-', 'c-', 'm-', 'y-', 'k-']
 
 # Conjunto de parâmetros de cada algoritmo para execução
 #todos
-#parametrizacao = [[False,iterMaxILS,iterMaxBL,pPert,iterMaxBL_P,W,M,V],[False,W,M,V,geracoes,tampop,crossover,mutacao,pressaoSel],[False,colonias,numForm,C,Q,alpha,beta,rho,W,M,V]]
+#parametrizacao = [[False,iterMaxILS,iterMaxBL,pPert,iterMaxBL_P,W,M,V,interS],[False,W,M,V,geracoes,tampop,crossover,mutacao,pressaoSel,interS],[False,colonias,numForm,C,Q,alpha,beta,rho,W,M,V,interS]]
 #ag
 #parametrizacao= [[False,W,M,V,geracoes,100,crossover,mutacao,pressaoSel], [False,W,M,V,geracoes,150,crossover,mutacao,pressaoSel], [False,W,M,V,geracoes,200,crossover,mutacao,pressaoSel], [False,W,M,V,geracoes,250,crossover,mutacao,pressaoSel], [False,W,M,V,geracoes,300,crossover,mutacao,pressaoSel]]
 #ils
-#parametrizacao= [[False,4000,20,0.001,3,W,M,V],[False,4000,20,0.001,6,W,M,V],[False,4000,20,0.001,9,W,M,V],[False,4000,20,0.001,12,W,M,V]]
+#parametrizacao= [[False,15000,10,pPert,iterMaxBL_P,W,M,V,interS], [False,15000,20,pPert,iterMaxBL_P,W,M,V,interS], [False,15000,30,pPert,iterMaxBL_P,W,M,V,interS], [False,15000,40,pPert,iterMaxBL_P,W,M,V,interS]]
+#acos
+#parametrizacao=[[False,colonias,10,C,Q,alpha,beta,rho,W,M,V,interS],[False,colonias,20,C,Q,alpha,beta,rho,W,M,V,interS],[False,colonias,30,C,Q,alpha,beta,rho,W,M,V,interS],[False,colonias,40,C,Q,alpha,beta,rho,W,M,V,interS]]
 #aco
-parametrizacao = [[False,colonias,numForm,C,Q,1,1,rho,W,M,V], [False,colonias,numForm,C,Q,alpha,3,rho,W,M,V],[False,colonias,numForm,C,Q,3,beta,rho,W,M,V],[False,colonias,numForm,C,Q,1,5,rho,W,M,V],[False,colonias,numForm,C,Q,3,5,rho,W,M,V],[False,colonias,numForm,C,Q,5,3,rho,W,M,V]]
+#parametrizacao=[[False,colonias,numForm,C,Q,alpha,beta,rho,W,M,V,interS]]
+#ag
+#parametrizacao = [[False,W,M,V,geracoes,350,crossover,mutacao,pressaoSel,interS],[False,W,M,V,geracoes,400,crossover,mutacao,pressaoSel,interS],[False,W,M,V,geracoes,450,crossover,mutacao,pressaoSel,interS],[False,W,M,V,geracoes,500,crossover,mutacao,pressaoSel,interS]]
+#ils
+#parametrizacao = [[False,iterMaxILS,iterMaxBL,pPert,iterMaxBL_P,W,M,V,interS]]
+#ag
+parametrizacao = [[False,W,M,V,geracoes,tampop,crossover,mutacao,pressaoSel,interS]]
 
 # Médias das melhores execuções de cada iteração/geração
 execucoes = []
@@ -130,9 +153,10 @@ for i in range(0,len(algoritmos)): # para cada algoritmo
         #res = toCall(parametrizacao[i])
         #execucoes[i].append(res)
         res.append(pool.apply_async(toCall,[parametrizacao[i]]))
+    print 'Executando %d vezes' % (len(res))
     for j in range(0,len(res)):
         execucoes[i].append(res[j].get())
-    print 'Valor maximo da primeira execucao: %f' % (max(execucoes[i][0]))
+    print 'Valor maximo da primeira execucao: %f' % (max(execucoes[i][0][0]))
     elapsed = timeit.default_timer() - start_time
     print 'Tempo de execucao das %i vezes: %f segundos' % (n,elapsed)
 
@@ -142,8 +166,14 @@ print '----------------------'
 # e faço um único gráfico com os resultados
 
 for i in range(0,len(algoritmos)):
+    # Recrio uma lista apenas com as melhores (problemas com zip())
+    best = []
+    for j in range(0,len(execucoes[i])):
+        best.append(execucoes[i][j][0])
+    
     # Crio uma única lista com a soma de todas as execuções
-    zipped_list = zip(*execucoes[i])
+    #zipped_list = zip(*execucoes[i])
+    zipped_list = zip(*best)
     medias = [sum(item)/float(n) for item in zipped_list]
 
     # @todo olhar se python tem operador ternário
@@ -166,7 +196,7 @@ if cluster:
     for i in range(0,len(algoritmos)):
         histoDados.append([])
         for j in range(0,len(execucoes[i])):
-            histoDados[i].append(max(execucoes[i][j])) # tera cada melhor das 30 execucoes
+            histoDados[i].append(max(execucoes[i][j][0])) # tera cada melhor das 30 execucoes
         
         h = sorted(histoDados[i])  #sorted
         print 'fit = stats.norm.pdf(',h,', np.mean(',h,'), np.std(',h,'))'
@@ -180,9 +210,9 @@ if cluster:
     sys.exit(0) #Exits with zero, which is generally interpreted as success. Non-zero codes are usually treated as errors. The default is to exit with zero.
 
 plt.legend(loc='best')
-plt.xlabel('Iteracoes')
-plt.ylabel('Media$_{v}$')
-plt.title('Informacao Heuristica V/M')
+plt.xlabel(u'Gerações')
+plt.ylabel(u'Média$_{v}$')
+plt.title(u'max(1-$\overline{IC}$)')
 plt.grid()
 plt.show()
 
@@ -194,7 +224,7 @@ histoDados = []
 for i in range(0,len(algoritmos)):
     histoDados.append([])
     for j in range(0,len(execucoes[i])):
-        histoDados[i].append(max(execucoes[i][j])) # tera cada melhor das 30 execucoes
+        histoDados[i].append(max(execucoes[i][j][0])) # tera cada melhor das 30 execucoes
     
     h = sorted(histoDados[i])  #sorted
 
@@ -221,3 +251,18 @@ for i in range(0,len(algoritmos)):
 for i in range(0,len(histoDados)):
     print 'histoDados do algoritmo %s:' % (nomesAlg[i])
     print histoDados[i]
+    
+print '---\nExecuções intermediárias'
+for i in range(0,len(algoritmos)):
+    # Recrio uma lista apenas com as soluções intermediárias (problemas com zip())
+    parciais = []
+    for j in range(0,len(execucoes[i])):
+        parciais.append(execucoes[i][j][1])
+    # Crio uma única lista com a soma de todas as execuções
+    zipped_list = zip(*parciais)
+    medias = [sum(item)/float(n) for item in zipped_list]
+    
+    print '\nMédia do alg %s' % (nomesAlg[i])
+    print medias
+    
+pool.terminate()
