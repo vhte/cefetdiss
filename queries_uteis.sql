@@ -78,3 +78,62 @@ JOIN Alimentador ON Segmento.ALIMENTADOR_ID = Alimentador.ID
 JOIN EquipamentoNovo ON EquipamentoNovo.TIPO_EQUIPAMENTO_ID = EquipamentoMT.TIPO_EQUIPAMENTO_ID 
 LEFT JOIN CaboMT ON EquipamentoMT.ID = CaboMT.ID
 WHERE Alimentador.ID = 3;
+
+/* Numero de eventos de interrupcao, unidades afetados e tempo das interrupcoes por ANO e por ALIMENTADOR */
+SELECT COUNT(ID) AS 'EVENTOS', SUM(CONS_DIST) as 'AFETADOS', SUM(DURACAO)/60 AS 'DURACAO'
+FROM Interrupcao
+WHERE YEAR(DATA_INICIO) = 2011; /*2012*/;
+
+SELECT Alimentador.CEMIG_ID,COUNT(Interrupcao.ID) AS 'EVENTOS', SUM(Interrupcao.CONS_DIST) as 'AFETADOS', SUM(Interrupcao.DURACAO)/60 AS 'DURACAO'
+FROM Interrupcao, Alimentador
+WHERE Interrupcao.ALIMENTADOR_ID = Alimentador.ID
+GROUP BY Alimentador.CEMIG_ID ASC;
+
+
+/* Numero interrupcoes por mês dos alimentadores */
+SELECT
+	Alimentador.CEMIG_ID,
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=1,1,0)) AS 'JAN',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=2,1,0)) AS 'FEV',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=3,1,0)) AS 'MAR',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=4,1,0)) AS 'APR',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=5,1,0)) AS 'MAY',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=6,1,0)) AS 'JUN',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=7,1,0)) AS 'JUL',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=8,1,0)) AS 'AUG',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=9,1,0)) AS 'SEP',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=10,1,0)) AS 'OCT',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=11,1,0)) AS 'NOV',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=12,1,0)) AS 'DEZ'
+FROM
+	Interrupcao, Alimentador
+WHERE
+	Interrupcao.ALIMENTADOR_ID = Alimentador.ID AND
+	Alimentador.CEMIG_ID LIKE 'BHSE%' AND
+	YEAR(Interrupcao.DATA_INICIO) = 2013
+GROUP BY
+	Alimentador.CEMIG_ID;
+
+/* Soma de unidades afetadas por todas as interrupcoes no ano */
+SELECT
+	Alimentador.CEMIG_ID,
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=1,Interrupcao.CONS_DIST,0)) AS 'JAN',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=2,Interrupcao.CONS_DIST,0)) AS 'FEV',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=3,Interrupcao.CONS_DIST,0)) AS 'MAR',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=4,Interrupcao.CONS_DIST,0)) AS 'APR',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=5,Interrupcao.CONS_DIST,0)) AS 'MAY',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=6,Interrupcao.CONS_DIST,0)) AS 'JUN',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=7,Interrupcao.CONS_DIST,0)) AS 'JUL',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=8,Interrupcao.CONS_DIST,0)) AS 'AUG',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=9,Interrupcao.CONS_DIST,0)) AS 'SEP',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=10,Interrupcao.CONS_DIST,0)) AS 'OCT',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=11,Interrupcao.CONS_DIST,0)) AS 'NOV',
+	SUM(IF(MONTH(Interrupcao.DATA_INICIO)=12,Interrupcao.CONS_DIST,0)) AS 'DEC'
+FROM
+	Interrupcao, Alimentador
+WHERE
+	Interrupcao.ALIMENTADOR_ID = Alimentador.ID AND
+	Alimentador.CEMIG_ID LIKE 'BHSE%' AND
+	YEAR(Interrupcao.DATA_INICIO) = 2013
+GROUP BY
+	Alimentador.CEMIG_ID;

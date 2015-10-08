@@ -1,43 +1,77 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Dec 11 14:32:14 2014
+INESC - SPEA2
+
+Assinatura
+python spea2.py GERACOES POPULACAO CROSSOVER MUTACAO CORTES POPINICIAL BUSCALOCAL
 
 @author: torres
 @todo Melhorar o operador de truncamento
         Este deve desempatar até o último caso de números iguais [1,2,3,4] != [1,2,3,5] != [1,2,3,6]
 """
-import d519
+from random import randrange
 import math # math.floor() para baixo round() para cima
-#import sys
+import sys
+import copy
 #sys.setrecursionlimit(100000)
 
 # PARAMETROS
-#Numero de gerações
-g = 100
-#Tamanho da população
-N = 50
-# Probabilidade crossover
-crossover = 90
-# Probabilidade mutacao
-mutacao = 5
-# Tamanho Arquivo
-tamArq = 50
+# Cluster
+cluster= False
 
-W=500
-M=[57, 72, 51, 96, 82, 61, 65, 66, 53, 82, 61, 70, 54, 83, 66, 89, 83, 66, 52, 52, 54, 85, 62, 72, 87, 89, 68, 50, 71, 57, 73, 85, 58, 77, 75, 99, 71, 55, 84, 59, 82, 97, 99, 53, 73, 62, 93, 63, 89, 59, 84, 54, 93, 71, 78, 55, 69, 67, 57, 91, 82, 60, 78, 64, 54, 86, 66, 73, 56, 71, 87, 58, 53, 95, 92, 94, 53, 78, 72, 82, 74, 68, 55, 74, 82, 59, 68, 66, 64, 93, 76, 92, 88, 76, 54, 97, 78, 82, 60, 63, 84, 95, 58, 89, 77, 96, 89, 76, 77, 54, 79, 70, 98, 53, 76, 94, 79, 83, 63, 71, 99, 77, 64, 98, 52, 87, 50, 80, 51, 67, 56, 62, 62, 52, 51, 84, 89, 79, 52, 53, 57, 74, 92, 79, 84, 95, 55, 87, 76, 69, 90, 71, 79, 50, 68, 57, 96, 73, 63, 96, 80, 93, 72, 80, 88, 71, 73, 77, 99, 56, 76, 87, 58, 56, 52, 94, 83, 63, 68, 89, 60, 90, 78, 51, 68, 57, 79, 73, 57, 56, 83, 57, 57, 75, 77, 60, 70, 87, 87, 99, 54, 88, 80, 86, 74, 96, 84, 87, 82, 80, 82, 52, 99, 62, 77, 50, 52, 58, 90, 80, 80, 64, 82, 61, 70, 54, 82, 66, 70, 82, 90, 62, 69, 75, 69, 78, 50, 71, 81, 71, 95, 58, 69, 96, 51, 78, 70, 75, 87, 95, 87, 81, 67, 66, 72, 98, 73, 60, 97, 97, 70, 97, 54, 56, 69, 73, 85, 90, 89, 80, 93, 79, 63, 67, 99, 73, 74, 93, 94, 53, 65, 79, 65, 56, 78, 94, 60, 86, 64, 65, 75, 67, 85, 56, 99, 87, 92, 78, 74, 58, 55, 94, 89, 98, 84, 71, 53, 80, 52, 52, 51, 70, 57, 56, 84, 98, 60, 57, 89, 63, 51, 54, 77, 96, 92, 62, 64, 62, 75, 90, 71, 88, 55, 66, 72, 66, 71, 60, 93, 80, 96, 63, 92, 86, 60, 77, 57, 65, 67, 86, 78, 59, 65, 98, 81, 66, 90, 61, 94, 84, 52, 55, 66, 60, 65, 79, 76, 88, 95, 66, 65, 92, 62, 75, 99, 63, 92, 97, 97, 72, 90, 87, 64, 87, 68, 86, 72, 66, 82, 90, 76, 68, 55, 56, 83, 50, 83, 90, 67, 83, 56, 83, 87, 55, 73, 90, 53, 94, 54, 50, 62, 75, 98, 77, 96, 81, 78, 95, 52, 69, 94, 51, 53, 72, 72, 78, 68, 60, 97, 67, 77, 60, 88, 85, 73, 85, 65, 88, 56, 51, 73, 66, 75, 83, 91, 60, 56, 99, 81, 53, 50, 72, 94, 61, 54, 67, 63, 65, 73, 50, 85, 73, 70, 86, 59, 61, 57, 52, 66, 70, 90, 96, 53, 95, 50, 94, 73, 58, 71, 74, 90, 90, 61, 98, 93, 84, 69, 83, 62, 83, 77, 99, 52, 74, 86, 50, 85, 51, 55, 58]
-V=[164, 835, 881, 190, 440, 785, 685, 80, 630, 192, 649, 220, 538, 625, 722, 43, 587, 863, 183, 907, 616, 278, 485, 997, 208, 513, 951, 512, 699, 241, 772, 460, 79, 247, 527, 942, 993, 520, 566, 837, 749, 133, 835, 175, 751, 644, 331, 287, 903, 268, 758, 790, 345, 915, 287, 432, 38, 630, 347, 628, 915, 266, 652, 785, 240, 713, 946, 634, 253, 323, 949, 47, 685, 981, 493, 634, 418, 856, 866, 693, 159, 830, 501, 104, 59, 377, 732, 336, 666, 298, 673, 822, 36, 734, 68, 245, 629, 688, 723, 83, 363, 77, 103, 188, 700, 286, 33, 355, 716, 59, 427, 308, 735, 698, 266, 998, 259, 686, 865, 798, 16, 868, 551, 912, 97, 54, 614, 794, 714, 772, 316, 461, 387, 609, 41, 655, 936, 38, 998, 976, 41, 607, 930, 726, 593, 82, 654, 631, 36, 323, 120, 843, 823, 932, 240, 172, 15, 333, 559, 801, 753, 457, 408, 986, 46, 259, 620, 642, 782, 15, 955, 179, 230, 407, 660, 904, 532, 204, 485, 473, 219, 672, 888, 586, 492, 888, 500, 846, 489, 730, 539, 977, 559, 135, 46, 322, 417, 357, 237, 646, 95, 891, 17, 6, 785, 832, 850, 574, 512, 2, 854, 698, 79, 35, 395, 924, 108, 323, 666, 86, 168, 427, 847, 166, 218, 421, 655, 929, 885, 281, 535, 805, 839, 509, 899, 783, 237, 515, 634, 724, 201, 354, 891, 108, 526, 181, 957, 582, 397, 364, 558, 900, 679, 530, 53, 718, 906, 909, 963, 909, 957, 404, 996, 119, 968, 633, 21, 36, 52, 266, 466, 121, 82, 918, 538, 269, 625, 21, 858, 905, 41, 437, 358, 550, 294, 960, 417, 807, 24, 631, 80, 8, 170, 112, 801, 421, 856, 504, 203, 507, 361, 782, 378, 250, 617, 500, 663, 171, 267, 721, 288, 317, 344, 560, 693, 401, 188, 155, 423, 921, 341, 215, 439, 309, 320, 832, 770, 544, 138, 47, 480, 49, 464, 21, 133, 778, 133, 917, 105, 581, 234, 652, 942, 599, 355, 195, 206, 57, 186, 896, 543, 83, 259, 951, 84, 602, 696, 51, 788, 82, 256, 816, 210, 627, 618, 634, 49, 691, 305, 812, 952, 900, 635, 229, 835, 685, 828, 372, 666, 531, 958, 980, 744, 146, 446, 937, 918, 426, 359, 808, 237, 518, 376, 47, 971, 851, 447, 545, 211, 965, 230, 859, 83, 892, 247, 957, 779, 816, 144, 464, 182, 957, 964, 364, 919, 824, 352, 870, 410, 396, 547, 799, 737, 532, 506, 813, 57, 317, 871, 734, 947, 301, 738, 222, 587, 351, 534, 614, 922, 693, 885, 312, 344, 178, 294, 382, 322, 173, 577, 280, 127, 502, 359, 879, 543, 385, 276, 55, 494, 186, 100, 886, 497, 335, 521, 891, 622, 95, 617, 360, 413, 903, 72, 6, 331, 746, 684, 354, 325, 642, 191, 871, 327, 148, 503, 264, 424, 864, 946, 558, 657, 357, 727, 228, 339, 440, 819, 978, 129, 814]
+if cluster:
+    #Numero de gerações
+    g = int(sys.argv[1])
+    #Tamanho da população
+    N = int(sys.argv[2])
+    # Probabilidade crossover
+    crossover = int(sys.argv[3])
+    # Probabilidade mutacao
+    mutacao = int(sys.argv[4])
+    # Quantidade de cortes crossver
+    cortes = int(sys.argv[5])
+    # Pop inicial (até x%)
+    initAte = int(sys.argv[6])
+    # Busca Local após mutação
+    buscaLocal = int(sys.argv[7])
+else:
+    #Numero de gerações
+    g = 1000
+    #Tamanho da população
+    N = 300
+    # Probabilidade crossover
+    crossover = 90
+    # Probabilidade mutacao
+    mutacao = 5
+    # Quantidade de cortes crossver
+    cortes = 2
+    # Pop inicial (até x%)
+    initAte = 10
+    # Busca Local após nova população. Até x trocas p/ avaliação
+    buscaLocal = 1
+
+# Tamanho Arquivo
+tamArq = N
+
+# Limite custo
+W =float('inf')#11000
+# ICs
+V = [0.0, 0.0, 0.04400000000000004, 0.10450000000000004, 0.15949999999999998, 0.35750000000000004, 0.43999999999999995, 0.46199999999999997, 0.10450000000000004, 0.13749999999999996, 0.0, 0.5389999999999999, 0.616, 0.6985, 0.00990000000000002, 0.02849999999999997, 0.726, 0.8415, 0.9185, 0.0, 0.08250000000000002, 0.1925, 0.20350000000000001, 0.31899999999999995, 0.0595, 0.37949999999999995, 0.4125, 0.484, 0.07540000000000002, 0.08799999999999997, 0.5665, 0.627, 0.6599999999999999, 0.8305, 0.913, 0.0, 0.04949999999999999, 0.07699999999999996, 0.13749999999999996, 0.35750000000000004, 0.4235, 0.46199999999999997, 0.5555, 0.10999999999999999, 0.13439999999999996, 0.9223, 0.9289000000000001, 0.935, 0.9436, 0.9403, 0.909, 0.9099, 0.781, 0.8415, 0.21860000000000002, 0.22499999999999998, 0.9678, 0.9, 0.9017, 0.9057, 0.908, 0.9111, 0.9158, 0.9138, 0.9156, 0.9177, 0.9, 0.9181, 0.9297, 0.9359, 0.938, 0.9417, 0.9526, 0.9544, 0.9696, 0.9, 0.9, 0.906, 0.9446, 0.9498, 0.9001, 0.9015, 0.9024, 0.9038, 0.22550000000000003, 0.08440000000000003, 0.28049999999999997, 0.12119999999999997, 0.374, 0.4345, 0.5885, 0.649, 0.825, 0.14790000000000003, 0.7755, 0.8745, 0.0, 0.03300000000000003, 0.08250000000000002, 0.15400000000000003, 0.913, 0.16149999999999998, 0.1795, 0.3245, 0.39049999999999996, 0.4565, 0.0, 0.6214999999999999, 0.737, 0.792, 0.8745, 0.01100000000000001, 0.24080000000000001, 0.24, 0.0, 0.04949999999999999, 0.09899999999999998, 0.13749999999999996, 0.253, 0.29700000000000004, 0.363, 0.5665, 0.121, 0.13749999999999996, 0.2643, 0.2824, 0.32509999999999994, 0.0, 0.6930000000000001, 0.759, 0.8140000000000001, 0.0, 0.0605, 0.23099999999999998, 0.011600000000000055, 0.07699999999999996, 0.13749999999999996, 0.22550000000000003, 0.29700000000000004, 0.37949999999999995, 0.40700000000000003, 0.48950000000000005, 0.31899999999999995, 0.10440000000000005, 0.04039999999999999, 0.07720000000000005, 0.9376, 0.9460999999999999, 0.9509, 0.9715, 0.9209, 0.9106, 0.0, 0.05500000000000005, 0.10450000000000004, 0.14849999999999997, 0.253, 0.28600000000000003, 0.3355, 0.396, 0.5775, 0.627, 0.4125, 0.125, 0.12870000000000004, 0.15569999999999995, 0.44420000000000004, 0.6875, 0.7424999999999999, 0.836, 0.8634999999999999, 0.0, 0.09350000000000003, 0.16500000000000004, 0.21450000000000002, 0.31899999999999995, 0.374, 0.506, 0.5720000000000001, 0.6214999999999999, 0.20189999999999997, 0.23350000000000004, 0.5335, 0.6435, 0.2733, 0.27559999999999996, 0.6819999999999999, 0.7645, 0.0, 0.04400000000000004, 0.12649999999999995, 0.13749999999999996, 0.21450000000000002, 0.2915, 0.374, 0.40149999999999997, 0.495, 0.7095, 0.748, 0.45709999999999995, 0.0, 0.0, 0.02849999999999997, 0.04039999999999999, 0.5335, 0.605, 0.07540000000000002, 0.08979999999999999, 0.6655, 0.792, 0.913, 0.0, 0.02200000000000002, 0.10999999999999999, 0.16500000000000004, 0.22550000000000003, 0.31899999999999995, 0.8525, 0.9185, 0.12119999999999997, 0.1421, 0.16749999999999998, 0.9226, 0.9274, 0.9359, 0.9097999999999999, 0.911, 0.6545000000000001, 0.671, 0.8525, 0.913, 0.04949999999999999, 0.0, 0.01649999999999996, 0.2378, 0.25539999999999996, 0.09899999999999998, 0.14300000000000002, 0.27559999999999996, 0.31299999999999994, 0.24750000000000005, 0.31899999999999995, 0.363, 0.4125, 0.0, 0.016599999999999948, 0.02510000000000001, 0.9267, 0.9372, 0.9441, 0.967, 0.9045, 0.0, 0.01100000000000001, 0.10450000000000004, 0.14300000000000002, 0.25849999999999995, 0.31899999999999995, 0.385, 0.04390000000000005, 0.06299999999999994, 0.09160000000000001, 0.11560000000000004, 0.12680000000000002]
+# Custo
+M = [6.649294590463687, 0.6600000262260437, 0.9100000262260437, 16.70063082477171, 13.176766277561896, 1.4567244917036588, 35.92700160294864, 9.780029213543866, 0.9100000262260437, 0.6600000262260437, 5.039999961853027, 5.124980290103762, 2.903134252763179, 4.5826210065809425, 5.039999961853027, 5.039999961853027, 3.375060234277073, 3.7031472551284823, 10.810925833996153, 21.48596417965391, 19.345787513770162, 5.563273627089104, 0.9100000262260437, 0.6600000262260437, 5.039999961853027, 5.534409868911316, 13.207794939044863, 3.40753216463016, 5.039999961853027, 5.039999961853027, 4.282265636033321, 7.8510539508563815, 4.562911264871829, 3.7220220166797517, 9.097963230566355, 9.522319901323062, 3.2665514052772195, 4.829350896454708, 13.018736432406818, 0.6600000262260437, 0.6600000262260437, 0.6600000262260437, 0.9100000262260437, 5.039999961853027, 5.039999961853027, 8.10961281625653, 28.6129575572412, 12.236691965552048, 4.254123512290593, 0.6600000262260437, 5.039999961853027, 5.039999961853027, 4.2658669387833505, 32.262974814426855, 5.039999961853027, 5.039999961853027, 9.687679436551523, 15.221070813182394, 10.225780159346876, 7.832646065734676, 10.554715923765325, 5.565297118111572, 10.399967707155621, 5.039999961853027, 5.039999961853027, 5.039999961853027, 5.039999961853027, 16.65846729537903, 3.8437458774731788, 11.813269047654467, 17.074448256963514, 4.282265636033321, 0.7074500274658203, 4.829350896454708, 3.9844009028084986, 3.830700324522244, 22.068053837720306, 3.8437458774731788, 0.9100000262260437, 0.6600000262260437, 5.039999961853027, 5.039999961853027, 5.039999961853027, 5.039999961853027, 15.240595423544292, 5.039999961853027, 2.546820098876953, 5.039999961853027, 32.77431946974667, 4.406677949422884, 2.8614513632092566, 2.8439208279560555, 0.9100000262260437, 5.039999961853027, 6.2616970170889985, 5.14253916178766, 9.548070970056578, 7.6877319399303525, 15.977900714391494, 5.722916759698477, 0.9100000262260437, 5.039999961853027, 5.039999961853027, 2.6669309420868523, 2.4750706371298876, 10.691155027954606, 0.9100000262260437, 4.703354171783081, 4.529887178926321, 19.044978760331404, 4.709720962954336, 0.9100000262260437, 5.039999961853027, 5.039999961853027, 3.7220220166797517, 5.189047070812201, 7.38194407081214, 4.358712738248258, 4.529887178926321, 7.5513354753224995, 18.489206899612444, 16.34605733734253, 0.9100000262260437, 0.6600000262260437, 5.039999961853027, 5.039999961853027, 5.039999961853027, 5.039999961853027, 1.334815229692249, 4.496623177867587, 3.9134154452071526, 4.303248628028378, 5.113250627020199, 0.6600000262260437, 5.039999961853027, 5.356104093174741, 4.163753777126986, 5.388491284106509, 14.487585812934558, 9.546840359352064, 9.270000448091421, 10.978209008062725, 0.9100000262260437, 5.039999961853027, 5.039999961853027, 5.039999961853027, 5.494524048805062, 4.328759511777898, 5.663491216467286, 4.328759511777898, 0.9100000262260437, 5.039999961853027, 13.04914223215601, 0.721460368414264, 4.051665382253297, 5.55059617786645, 6.327631303515693, 6.632853523503058, 31.282167288097554, 4.496623177867587, 10.406929293500726, 10.130132561563048, 0.9100000262260437, 5.039999961853027, 5.039999961853027, 5.039999961853027, 5.039999961853027, 4.911556770999392, 9.923401837518323, 1.1667576614553692, 22.197941559132655, 4.328759511777898, 10.16203884278529, 1.4429150695423887, 2.7798400139676525, 0.8489400329589845, 4.677744515332277, 0.6600000262260437, 0.6600000262260437, 0.9100000262260437, 5.039999961853027, 5.039999961853027, 20.508410215310054, 20.43158124595764, 5.039999961853027, 5.039999961853027, 5.079858977087948, 23.77046341461735, 10.273589385217289, 4.911570804279356, 3.7461460345497763, 18.48071784471744, 0.7619477304635802, 5.024395136738836, 9.101825621005613, 0.42447001647949223, 4.329325430779514, 0.6600000262260437, 0.9100000262260437, 5.039999961853027, 5.039999961853027, 5.039999961853027, 5.039999961853027, 5.039999961853027, 5.150321155269107, 13.354506404167624, 5.039999961853027, 5.039999961853027, 4.862403048960143, 4.1901134044435455, 31.592030745562166, 4.0836420997461245, 19.602449727409056, 5.801090225219727, 4.163753777126986, 3.001455730121641, 12.831516285444028, 0.6600000262260437, 0.9100000262260437, 5.039999961853027, 5.039999961853027, 5.039999961853027, 4.606589309017523, 23.043910854671616, 16.301063403329465, 5.039999961853027, 5.039999961853027, 3.60730184207132, 1.0300627872452097, 22.92972961198795, 4.634745466040215, 9.82407536141784, 0.6600000262260437, 0.9100000262260437, 5.039999961853027, 5.039999961853027, 15.39213217800844, 4.358712738248258, 5.039999961853027, 5.039999961853027, 9.241320741777773, 12.343701122691156, 14.487585812934558, 9.260506394454394, 5.039999961853027, 5.039999961853027, 5.039999961853027, 3.7461460345497763, 2.06012274084735, 6.220594079816656, 3.830700324522244, 0.6600000262260437, 5.250411365644541, 6.218188451785943, 12.42801522767963, 9.494998184716678, 12.876482152897166, 9.966428953370313, 16.48542507911194, 5.039999961853027, 5.039999961853027, 5.039999961853027, 5.039999961853027, 5.039999961853027]
+
 # Total itens
 n = len(M)
 
 #Populacao
 P = []
 # Arquivo
-Pa = [[]]*tamArq
-# Conjunto não dominado
-A = []
+Pa = []
 
 class Cromossomo:
-    alelos = [0]
+    alelos = [False]
+    valor = 0 # ic
+    peso = 0 # custo
     S = 0 # Strength value, representing the number of solutions it dominates
     R = 0
     F = 0 # Fitness
@@ -51,25 +85,28 @@ class Cromossomo:
             return
             
         # Gerando posições de alelos aleatórias
-        for i in range(0,n):
-            pos = d519.randrange(0,100)
-            if pos > 50:
-                self.alelos[i] = 1
+        for i in range(0,int(n*initAte/float(100))): # até x% da solução inicial
+            self.alelos[randrange(0,n)] = True
+                
+        # Calcula valor e peso para armazenar
+        self.calculaValor()
+        self.calculaPeso()
 
                 
     def calculaPeso(self):
         peso = 0
         for i in range(0,len(self.alelos)):
-            if self.alelos[i] == 1:
+            if self.alelos[i]:
                 peso = peso + M[i]
-        return peso
+        self.peso = peso #- self.calculaFitness()
     
     def calculaValor(self):
         valor = 0
         for i in range(0,len(self.alelos)):
-            if self.alelos[i] == 1:
+            if self.alelos[i]:
                 valor = valor + V[i]
-        return valor
+        self.valor = valor #- self.calculaFitness()
+        
     
 
 def calculaFitness():
@@ -77,20 +114,16 @@ def calculaFitness():
     global Pa
     # fitnessPopulation
     fP = P + Pa
-    print 'Tamanho fp: %d P: %d Pa: %d' % (len(fP), len(P), len(Pa))
-    # Como o arquivo inicial é vazio, retiro as posições vazias pois não servem para nada (lista vazia)
-    for i in range(0,len(fP)):
-        if not fP[i]:
-            del fP[i:len(fP)]
-            break
-    
+    if not cluster:
+        print 'Tamanho fp: %d P: %d Pa: %d' % (len(fP), len(P), len(Pa))
+
     # Calculando S(i)
     for i in range(0,len(fP)):
         for j in range(0,len(fP)):
             if i == j:
                 continue
-            # Verifico se i domkina j
-            if fP[i].calculaValor() > fP[j].calculaValor() and fP[i].calculaPeso() < fP[j].calculaPeso():
+            # Verifico se i domina j
+            if fP[i].valor > fP[j].valor and fP[i].peso < fP[j].peso:
                 fP[i].S = fP[i].S + 1
                 
     # Calculando R(i)
@@ -100,7 +133,7 @@ def calculaFitness():
             if i == j:
                 continue
             # Verifico se i é dominado por j
-            if fP[j].calculaValor() > fP[i].calculaValor() and fP[j].calculaPeso() < fP[i].calculaPeso():
+            if fP[j].valor > fP[i].valor and fP[j].peso < fP[i].peso:
                 totalDominadores = totalDominadores + fP[j].S
         fP[i].R = totalDominadores
         
@@ -113,7 +146,7 @@ def calculaFitness():
         for j in range(0,len(fP)):
             if i == j:
                 continue
-            lista.append(math.sqrt(pow(fP[j].calculaValor() - fP[i].calculaValor(), 2) + pow(fP[j].calculaPeso() - fP[i].calculaPeso(), 2)))
+            lista.append(math.sqrt(pow(fP[j].valor - fP[i].valor, 2) + pow(fP[j].peso - fP[i].peso, 2)))
         lista.sort() # ordena de forma ascendente
         fP[i].D = 1/float(lista[k]+2)
         
@@ -135,13 +168,13 @@ def calculaFitness():
 def spea2():
     global P
     global Pa
+    
     # Gera a população inicial randômica P0
     print 'Iniciou o algoritmo'
     # Crio os cromossomos e gero populacao 0
-    P = [0]*N
     print 'Instaciou população'
     for i in range(0,N):
-        P[i] = Cromossomo(n)
+        P.append(Cromossomo(n))
         
     
     print 'Criou populacao'
@@ -154,7 +187,7 @@ def spea2():
         print 'Iniciou geração %d' % (t)
         # Calcula fitness de Pt e Pat
         calculaFitness()
-        print 'Calculou fitness de P+Pa'
+        #print 'Calculou fitness de P+Pa'
             
         # Copiar todos os invidíduos não dominados em P[t] e Pa[t] para P[t+1]
         nPa = [] # novo arquivo, i.e, Pa[t+1]
@@ -163,7 +196,7 @@ def spea2():
         for i in range(0,len(PPa)):
             if PPa[i].F < 1:
                 nPa.append(PPa[i])
-                tabu.append(i)
+                tabu.append(id(PPa[i]))
        
         print 'Terminou de criar o arquivo. Tamanho: %d' % (len(nPa))
         # Verifica se o tamanho da proxima populacao é maior que o tamanho do arquivo
@@ -173,51 +206,57 @@ def spea2():
                 # Reseto as distancias, se existirem
                 PPa[i].Dv = []
                 # Somente quem entrou em tabu
-                if i not in tabu:
+                if id(PPa[i]) not in tabu:
                     PPa[i].Dv.append(float('inf')) # Assim nunca será o primeiro a escolher
                     continue
                 # Calculo da distancia para todos os vizinhos
                 for j in range(0,len(PPa)):
                     if i == j:
                         continue
-                    PPa[i].Dv.append(math.sqrt(pow(PPa[i].calculaValor() - PPa[j].calculaValor(),2) + pow(PPa[i].calculaPeso() - PPa[j].calculaPeso(),2)))
+                    PPa[i].Dv.append(math.sqrt(pow(PPa[i].valor - PPa[j].valor,2) + pow(PPa[i].peso - PPa[j].peso,2)))
                 
                 # Ordeno do menor para o maior
                 PPa[i].Dv.sort()
                 
             # Reduzir por meio de um operador de truncamento
-            i = 0
+            
             while len(nPa) > tamArq:
+                i = 0
+                """
                 # Se 0 e 1 são exatamente iguais, escolho qualquer um
                 if i == tamArq -2:
                     menorPos = 0
                     break
-                print 'Tamanho de nPa é maior que tamArq. i = %d' % (i)
-                menorPos = -1
+                """
+                #print 'Tamanho de nPa é maior que tamArq: %d' % (len(nPa))
+                
                 
                 # Buscando quem tem menor
                 PPa.sort(key=lambda x: min(x.Dv))
+
+                # por default é o primeiro                
+                menorPos = id(PPa[0])
                 
                 #Verifico se tem iguais
                 PPa[0].Dv.sort()
                 PPa[1].Dv.sort()
-                if PPa[0].Dv[i] == PPa[1].Dv[i]:
-                    print '--------'
-                    #print PPa[0].Dv
-                    #print PPa[1].Dv
-                    i = i +1
-                    continue
-                elif PPa[0].Dv[i] < PPa[1].Dv[i]:
-                    menorPos = 0
+                while PPa[0].Dv[i] == PPa[1].Dv[i]:
+                    i = i+1
+                    if i == len(PPa[0].Dv)-1:
+                        break # sao iguais, deixa o 0 mesmo para ser retirado
+                
+                if PPa[0].Dv[i] < PPa[1].Dv[i]:
+                    menorPos = id(PPa[0])
+                    PPa.pop(0)
                 else:
-                    menorPos = 1
+                    menorPos = id(PPa[1])
+                    PPa.pop(1)
                     
                 # Retiro quem é menor
                 for i in range(0,len(nPa)):
-                    if PPa[menorPos].alelos == nPa[i].alelos:
+                    if id(nPa[i]) == menorPos:
                         # Retira
                         nPa.pop(i)
-                        PPa.pop(menorPos)
                         break # for
                 
             
@@ -239,25 +278,25 @@ def spea2():
                 # Incluo uma solucao dominada com F>=1
                 nPa.append(tmp[i])
                 i = i+1
-            
-        # Se critério de parada, então pegar os não dominados de P[t+1] e montar o pareto resposta
-        if t == g-2: # Quer dizer que a última rodada seria inicializada
-            A = nPa
-            break # sai das gerações
         
         # Atualizo o arquivo definitivamente
         Pa = nPa
+        
+        # Se é a última geração, sair pois ja tenho só os nao-dominados
+        if t == g-1:
+            PPa = Pa
+            break
         
         # Torneio binario de Pa[t+1]
         torneio = []
         vencedorAnterior = -1 # para não deixar que dois pais sejam o mesmo pai
         j = 0
         while j < tamArq:
-            pai1Pos = d519.randrange(0,tamArq)
-            pai2Pos = d519.randrange(0,tamArq)
+            pai1Pos = randrange(0,tamArq)
+            pai2Pos = randrange(0,tamArq)
             # Nao deixo escolher o mesmo pai
             while pai1Pos == pai2Pos:
-                pai2Pos = d519.randrange(0,tamArq)
+                pai2Pos = randrange(0,tamArq)
                 
             # Ganha quem tem Fitness menor
             if Pa[pai1Pos].F < Pa[pai2Pos]:
@@ -291,7 +330,8 @@ def spea2():
             
            
             # Seleciono um ponto de cruzamento entre [0-n] (total alelos/itens)
-            pontoCorte = d519.randrange(0,(n)*2+1) # m+1 para englobar m
+            """
+            pontoCorte = randrange(0,(n)*2+1) # m+1 para englobar m
             
             ate = int(round(pontoCorte/float(2)))
             
@@ -303,6 +343,42 @@ def spea2():
             for k in range(ate,n):
                 filho1.alelos[k] = Pa[torneio[j+1]].alelos[k]
                 filho2.alelos[k] = Pa[torneio[j]].alelos[k]
+            """  
+            cortesV = [0]*cortes
+            alpha = 1
+            inicio = 0
+            for i in range(0,cortes):
+                cortesV[i] = randrange(inicio+1, n-cortes+alpha)
+                alpha = alpha+1
+                inicio = cortesV[i]
+            
+            atual = 0
+            tmp = 0
+            for i in range(0,cortes):
+                # Alternando entre os pais
+                if tmp % 2 == 0:
+                    pai1 = j
+                    pai2 = j+1
+                else:
+                    pai1 = j+1
+                    pai2 = j
+
+                for k in range(atual,cortesV[i]):
+                    filho1.alelos[k] = Pa[torneio[pai1]].alelos[k]
+                    filho2.alelos[k] = Pa[torneio[pai2]].alelos[k]
+                    
+                atual = cortesV[i]
+                tmp = tmp + 1
+            # Ultima parte
+            for k in range(atual, n):
+                filho1.alelos[k] = Pa[torneio[pai2]].alelos[k]
+                filho2.alelos[k] = Pa[torneio[pai1]].alelos[k] # Inverte pais
+                
+            # Calculo valor e peso dos novos filhos
+            filho1.calculaValor()
+            filho1.calculaPeso()
+            filho2.calculaValor()
+            filho2.calculaPeso()
             
             # Adiciono os filhos gerados na nova população
             P.append(filho1)
@@ -310,44 +386,90 @@ def spea2():
             j = j+2
             
         # Inicio mutação
-        r = d519.randrange(0,100)
+        r = randrange(0,100)
         if r < mutacao:
-            print 'Entrou mutação'
+            #print 'Entrou mutação'
             # Para cada indivíduo de novaPop, seleciono um bit aleatório e inverto o valor
             for j in range(0,N):
-                bit = d519.randrange(0,n)
-                if P[j].alelos[bit] == 1:
-                    P[j].alelos[bit] = 0
+                bit = randrange(0,n)
+                if P[j].alelos[bit]:
+                    P[j].alelos[bit] = False
+                    P[j].valor = P[j].valor - V[bit]
+                    P[j].peso = P[j].peso - M[bit]
                 else:
-                    P[j].alelos[bit] = 1
-        # Fim mutação
+                    P[j].alelos[bit] = True
+                    P[j].valor = P[j].valor + V[bit]
+                    P[j].peso = P[j].peso + M[bit]
         
+        # Busca local (diversidade)
+        if buscaLocal > 0:
+            # Para cada individuo da populacao, executo n buscas locais aleatórias
+            for j in range(0,N):
+                # altera ate buscaLocal posicoes aleatórias
+                tmp = copy.copy(P[j].alelos)
+                tmpValues = [copy.copy(P[j].valor), copy.copy(P[j].peso)]
+                for k in range(0,buscaLocal):
+                    pos = randrange(0,n)
+                    if P[j].alelos[pos]:
+                        P[j].alelos[pos] = False
+                        P[j].valor = P[j].valor - V[pos]
+                        P[j].peso = P[j].peso - M[pos]
+                    else:
+                        P[j].alelos[pos] = True
+                        P[j].valor = P[j].valor + V[pos]
+                        P[j].peso = P[j].peso + M[pos]
+                # Verifico NÃO se melhorou em pelo menos 2 objetivos
+                if (P[j].valor < tmpValues[0] and P[j].peso > tmpValues[1]):
+                    # Volta
+                    P[j].alelos = tmp
+                    P[j].valor= tmpValues[0]
+                    P[j].peso = tmpValues[1]
+                
+            
+
         # Proxima iteração
-        
+        """
+        # Fim iteracao, atualizacao de arquivo            
+        for i in range(0,len(nPa)):
+            existe = False
+            # Adiciono o que dominou somente se nao existir alguem com mesmo valor e peso igual a ele
+            for j in range(0,len(A)):
+                if (nPa[i].valor == A[j].valor and nPa[i].peso == A[j].peso) or (nPa[i].peso <= 0 or nPa[i].valor <= 0):
+                    existe = True
+                    break
+            if existe:
+                continue
+            A.append(nPa[i])
+        """
     # Retorna o conjunto de vetores-decisão representados pelos indivíduos não dominados de P[t+1]
+    print 'Iniciando calculo de nao-dominados de A pode demorar um pouco...'
+    
+    """
     A2 = []
-    for i in range(0,len(A)):
+    for i in range(0,len(PPa)):
         dominado = False
-        for j in range(0,len(A)):
+        for j in range(0,len(PPa)):
             if i == j:
                 continue
-            if A[i].calculaValor() <= A[j].calculaValor() and A[i].calculaPeso() >= A[j].calculaPeso():
+            if (PPa[i].valor < PPa[j].valor and PPa[i].peso < PPa[j].peso) and PPa[i].preco > PPa[j].preco or (PPa[i].valor <= 0):
                 dominado = True
+                break
         if not dominado:
-            A2.append(A[i])
-
+            A2.append(PPa[i])
+    """
+    A2 = PPa
+    
     # Solução pareto final
-    print 'F0dV = [ ',
+    print 'ic = [ ',
     for i in range(0,len(A2)):
-        print '%d, ' % (A2[i].calculaValor()),
+        print '%.20f, ' % (A2[i].valor),
     print ' ]'
         
         
-    print 'F0dW = [ ',
+    print 'custo = [ ',
     for i in range(0,len(A2)):
-        print '%d, ' % (A2[i].calculaPeso()),
-    print ' ]',
-        
+        print '%.20f, ' % (A2[i].peso),
+    print ' ]'
     
 
 spea2()

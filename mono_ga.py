@@ -18,14 +18,12 @@ Função fitness: Penalidade. Se soma dos pesos do cromossomo > W, fitness -= 7*
 @todo elitismo pg 44 MCEM
 
 @author Victor Torres - victorhugo@lsi.cefetmg.br
-
 https://pythonhosted.org/ete2/tutorial/tutorial_trees.html
 http://stackoverflow.com/questions/2349991/python-how-to-import-other-python-files
 http://stackoverflow.com/questions/9542738/python-find-in-list
 """
 import d519
 import math # math.floor() para baixo round() para cima
-
 
 """
 # Limite knapsack
@@ -54,10 +52,12 @@ class Cromossomo:
         if novo:
             return
             
-        
-        # Gerando posições de alelos aleatórias
-        
-        for i in range(0,int(n*0.1)): # até 50% da solução inicial
+        # Gerando posições de alelos aleatórias        
+        if tipoProblema == 0:
+            aleatorio = int(n*0.1)
+        else:
+            aleatorio = int(n*0.1)
+        for i in range(0,aleatorio): # até 50% da solução inicial
             self.alelos[d519.randrange(0,n)] = True
         """
         for i in range(0,n):
@@ -73,17 +73,27 @@ class Cromossomo:
                 self.alelos[i] = True
         """
                 
-        # Verifica se respeita o knapsack
         self.calculaPeso()
-        while self.peso > W:
-            # Retira um item aleatorio
-            tmp = d519.randrange(0,n)
-            self.alelos[tmp] = False
-            # Recalculo
-            self.valor = self.valor - V[tmp]
-            self.peso = self.peso - M[tmp]
-            
         self.calculaValor()
+        
+        # Verifica se respeita o knapsack
+        if tipoProblema == 0:
+            while self.peso > W:
+                # Retira um item aleatorio
+                tmp = d519.randrange(0,n)
+                self.alelos[tmp] = False
+                # Recalculo
+                self.valor = self.valor - V[tmp]
+                self.peso = self.peso - M[tmp]
+        else:
+            while self.calculaICAlim() < ICLimite:
+                # Adiciona um item aleatorio
+                tmp = d519.randrange(0,n)
+                self.alelos[tmp] = True
+                # Recalculo
+                self.valor = self.valor + V[tmp]
+                self.peso = self.peso + M[tmp]
+        
     '''
     def calculaRho(self):
         rho = 0
@@ -107,20 +117,46 @@ class Cromossomo:
                 valor = valor + V[i]
         self.valor = valor
 
+    # Maior fitness para max() menor fitness para min()
     def calculaFitness(self):
-        return self.valor - self.penalidade
-
-    def calculaPenalidade(self):
-        # Calcula a penalidade do problema e armazena (se houver)
-        if self.peso < W:
-            self.penalidade = 0
+        if tipoProblema == 0:
+            return self.valor - self.penalidade
         else:
-            self.penalidade = rho * (self.peso - W)
+            return self.peso + self.penalidade
+
+    # Calcula a penalidade do problema e armazena (se houver)
+    def calculaPenalidade(self):
+        if tipoProblema == 0:
+            if self.peso <= W:
+                self.penalidade = 0
+            else:
+                self.penalidade = rho * (self.peso - W)
+        else:
+            if self.calculaICAlim() >= ICLimite:
+                self.penalidade = 0
+            else:
+                self.penalidade = rho * (self.peso + 100) #rho * (ICLimite - self.calculaICAlim())
+
+    def calculaICAlim(self):
+        # Monta os vetores de segmento
+        produtoAlim = 1
+        for i in range(0,len(gruposSegmentos)):
+            produtoSeg = 1
+            for j in range(0,len(gruposSegmentos[i])):
+                # Se está na solucao deve ser 1
+                if self.alelos[gruposSegmentos[i][j]]:
+                    produtoSeg = produtoSeg * 0.9999999
+                else:
+                    produtoSeg = produtoSeg * (1 - V[gruposSegmentos[i][j]]) # pois ics na verdade é 1-IC mono.py
+            #print 'produtoSeg = %f' % (produtoSeg)
+            produtoSeg = pow(produtoSeg, 1/float(len(gruposSegmentos[i])))
+            produtoAlim = produtoAlim * produtoSeg
+        return pow(produtoAlim, 1/float(len(gruposSegmentos)))
         
 ####################### MAIN #######################
 def mono_ga(params):
     ########### PARAMETROS ###########
-    global W,M,V,n,rho
+    global W,M,V,n,rho,gruposSegmentos,tipoProblema,ICLimite,avaliacoes
     # debug
     debug = params[0]
     # problem knapsack
@@ -139,12 +175,22 @@ def mono_ga(params):
     mutacao = params[7] #5
     # Pressão seletiva
     pS = params[8] #3
+    #Número de cortes para geração dos filhos
+    cortes = params[9]
+    #Número de buscas locais assim que nova população é gerada
+    buscaLocal = params[10]
     # Posições das soluções intermediárias para justificar o ajuste de parâmetros
-    intermediarias = params[9]
+    intermediarias = params[11]
     sIntermediarias = []
+    # Lista de listas com os ids de cada ics para fazer media geometrica
+    gruposSegmentos = params[12]
+    # Parte do knapsack, IC limite do alimentador
+    ICLimite = params[13]
+    # Tipo de problema, max(1-IC) [0] ou min(Custo) [1]
+    tipoProblema = params[14]
     
     melhoresGeracao = [] # a resposta do algoritmo, para cada geração uma única resposta será enviada
-    avg = [0]*g
+    avaliacoes = 0  # numero de avaliacoes de solucao objetivo
     
     # calcula rho estatico para usar na penalização
     rho = 0
@@ -176,6 +222,9 @@ def mono_ga(params):
     #ultimoResultado = 0
     # Inicio as gerações
     for i in range(0,g):
+    #i = 0 # para num avaliacoes
+    #while i < g and avaliacoes < 210000:
+        i = i +1
         if debug:
             print 'Inicio geração %d e calculou penalidade' % (i)
             """
@@ -187,6 +236,11 @@ def mono_ga(params):
         # Calcula penalidade da populacao
         for j in range(0,m):
             populacao[j].calculaPenalidade()
+        
+        # Crio vetor de nova populacao
+        novaPop = []
+        # Crio uma cópia da população atual caso a nova não consiga solução factível
+        popBkp = d519.copy.copy(populacao)
         
         # Verifico se vai entrar no crossover
         r = d519.randrange(0,100)
@@ -208,11 +262,18 @@ def mono_ga(params):
                         candidato = d519.randrange(0,m)
                     candidatos.append(candidato)
                     
-                melhor = [0, 0] # [pos, val]
+                if tipoProblema == 0:
+                    melhor = [0, 0] # [pos, val]
+                else:                    
+                    melhor = [0, float('inf')] # [pos, pes]
                 for k in range(0,pS):
-                    valorCandidato = populacao[candidatos[k]].calculaFitness()
-                    if valorCandidato > melhor[1]:
-                        melhor = [k, valorCandidato]
+                    fitnessCandidato = populacao[candidatos[k]].calculaFitness()
+                    if tipoProblema == 0:
+                        if fitnessCandidato > melhor[1]:
+                            melhor = [k, fitnessCandidato]
+                    else:
+                        if fitnessCandidato < melhor[1]:
+                            melhor = [k, fitnessCandidato]
                     
                 vencedorAnterior = candidatos[melhor[0]]
                 torneio.append(candidatos[melhor[0]])
@@ -221,8 +282,6 @@ def mono_ga(params):
             if debug:
                 print 'torneio: '
                 print torneio
-            # Crio vetor de nova populacao
-            novaPop = []
             
             # Pais prontos em torneio, cruzamento de dois em dois
             j = 0
@@ -243,6 +302,7 @@ def mono_ga(params):
                 ate = int(round(pontoCorte/float(2)))
                 
                 #Gerando primeira metade de filho1 e filho2
+                """
                 for k in range(0,ate):
                     filho1.alelos[k] = populacao[torneio[j]].alelos[k]
                     if filho1.alelos[k]:
@@ -262,6 +322,51 @@ def mono_ga(params):
                     if filho2.alelos[k]:
                         filho2.valor = filho2.valor + V[k]
                         filho2.peso = filho2.peso + M[k]
+                """
+                
+                # INICIO C/ CORTES
+                cortesV = [0]*cortes
+                alpha = 1
+                inicio = 0
+                for l in range(0,cortes):
+                    cortesV[l] = d519.randrange(inicio+1, n-cortes+alpha)
+                    alpha = alpha+1
+                    inicio = cortesV[l]
+                
+                atual = 0
+                tmp = 0
+                for l in range(0,cortes):
+                    # Alternando entre os pais
+                    if tmp % 2 == 0:
+                        pai1 = j
+                        pai2 = j+1
+                    else:
+                        pai1 = j+1
+                        pai2 = j
+    
+                    for k in range(atual,cortesV[l]):
+                        filho1.alelos[k] = populacao[torneio[pai1]].alelos[k]
+                        if filho1.alelos[k]:
+                            filho1.valor = filho1.valor + V[k]
+                            filho1.peso = filho1.peso + M[k]
+                        filho2.alelos[k] = populacao[torneio[pai2]].alelos[k]
+                        if filho2.alelos[k]:
+                            filho2.valor = filho2.valor + V[k]
+                            filho2.peso = filho2.peso + M[k]
+                        
+                    atual = cortesV[l]
+                    tmp = tmp + 1
+                # Ultima parte
+                for k in range(atual, n):
+                    filho1.alelos[k] = populacao[torneio[pai2]].alelos[k]
+                    if filho1.alelos[k]:
+                        filho1.valor = filho1.valor + V[k]
+                        filho1.peso = filho1.peso + M[k]
+                    filho2.alelos[k] = populacao[torneio[pai1]].alelos[k]
+                    if filho2.alelos[k]:
+                        filho2.valor = filho2.valor + V[k]
+                        filho2.peso = filho2.peso + M[k] # Inverte pais
+                # FIM C/ CORTES
                 if debug:
                     print '==============='
                     print 'torneio: '
@@ -282,88 +387,182 @@ def mono_ga(params):
                 #filho2.calculaValor()
                 #filho1.calculaPeso()
                 #filho2.calculaPeso()
+                avaliacoes = avaliacoes + 2 # Calculo dos dois filhos
                 
                 # Adiciono os filhos gerados na nova população
                 novaPop.append(filho1)
                 novaPop.append(filho2)
                 j = j+2
-            # Inicio mutação
-            r = d519.randrange(0,100)
-            if r < mutacao:
-                if debug:
-                    print 'Entrou mutação'
-                # Para cada indivíduo de novaPop, seleciono um bit aleatório e inverto o valor
-                for j in range(0,m):
-                    bit = d519.randrange(0,n)
-                    if novaPop[j].alelos[bit]:
-                        novaPop[j].alelos[bit] = False
-                        novaPop[j].valor = novaPop[j].valor - V[bit]
-                        novaPop[j].peso = novaPop[j].peso - M[bit]
-                    else:
-                        novaPop[j].alelos[bit] = True
-                        novaPop[j].valor = novaPop[j].valor + V[bit]
-                        novaPop[j].peso = novaPop[j].peso + M[bit]
-            # Fim mutação
+            
                         
             # Iniciou Elitismo
             # Se a melhor solucao de novaPop for pior que a melhor solucao de populacao, O(2N)
-            bests = [-1,0,-1,0] # [pospopulacao, fitnesspopulacao, posnovapop, fitnessnovapop]
+            # [pospopulacao, fitnesspopulacao, posnovapop, fitnessnovapop]
+            if tipoProblema == 0:
+                bests = [-1,0,-1,0]
+            else:
+                bests = [-1,float('inf'),-1,float('inf')]
             for j in range(0,m):
                 fitness = populacao[j].calculaFitness()
-                if fitness > bests[1]:
-                    bests[0] = j
-                    bests[1] = fitness
+                if tipoProblema == 0:
+                    if fitness > bests[1]:
+                        bests[0] = j
+                        bests[1] = fitness
+                else:
+                    if fitness < bests[1]:
+                        bests[0] = j
+                        bests[1] = fitness
                     
                 # Computa penalidade, se existir
                 novaPop[j].calculaPenalidade()
                 fitness = novaPop[j].calculaFitness()
-                if fitness > bests[3]:
-                    bests[2] = j
-                    bests[3] = fitness
+                if tipoProblema == 0:
+                    if fitness > bests[3]:
+                        bests[2] = j
+                        bests[3] = fitness
+                else:
+                    if fitness < bests[3]:
+                        bests[2] = j
+                        bests[3] = fitness
                 
-            if bests[1] > bests[3]:
-                # Selecionar um membro aleatório de novaPop e adicionar o melhor de populacao
-                novaPop[d519.randrange(0,m)] = populacao[bests[0]]
+            if tipoProblema == 0:
+                if bests[1] > bests[3]:
+                    # Selecionar um membro aleatório de novaPop e adicionar o melhor de populacao
+                    novaPop[d519.randrange(0,m)] = populacao[bests[0]]
+            else:
+                if bests[1] < bests[3]:
+                    # Selecionar um membro aleatório de novaPop e adicionar o melhor de populacao
+                    novaPop[d519.randrange(0,m)] = populacao[bests[0]]
             
             # Fim Elitismo
 
-            # Atualiza população somente se gerou, pelo menos, uma solução factível.
-            # Se não gerou solução alguma factível, a população não é atualizada
+            
+        # Inicio mutação
+        r = d519.randrange(0,100)
+        if r < mutacao:
+            # Verifica se entrou no crossover
+            if len(novaPop) == 0:
+                novaPop = d519.copy.copy(populacao)
+            if debug:
+                print 'Entrou mutação'
+            # Para cada indivíduo de novaPop, seleciono um bit aleatório e inverto o valor
             for j in range(0,m):
-                if novaPop[j].peso <= W:
+                bit = d519.randrange(0,n)
+                if novaPop[j].alelos[bit]:
+                    novaPop[j].alelos[bit] = False
+                    novaPop[j].valor = novaPop[j].valor - V[bit]
+                    novaPop[j].peso = novaPop[j].peso - M[bit]
+                else:
+                    novaPop[j].alelos[bit] = True
+                    novaPop[j].valor = novaPop[j].valor + V[bit]
+                    novaPop[j].peso = novaPop[j].peso + M[bit]
+                avaliacoes = avaliacoes + 1
+        # Fim mutação    
+        
+        #terminou crossover/mutacao
+                    
+        
+        if len(novaPop) != 0:
+            populacao = d519.copy.copy(novaPop)
+        
+        # Atualiza população somente se gerou, pelo menos, uma solução factível.
+        # Se não gerou solução alguma factível, a população não é atualizada
+        popValida = False
+        for j in range(0,m):
+            if tipoProblema == 0:
+                if populacao[j].peso <= W:
                     # Aceita nova população
-                    populacao = novaPop
+                    popValida = True
                     break
-                
-            #terminou crossover/mutacao
-            
+            else:
+                if populacao[j].calculaICAlim() >= ICLimite:
+                    # Aceita nova população
+                    popValida = True
+                    break
+        if not popValida:
+            # Usa o backup
+            populacao = popBkp
+        
         # Procedimentos para fim geração
+        # Busca local (diversidade)
+        if buscaLocal > 0:
+            # Para cada individuo da populacao, executo n buscas locais aleatórias
+            for j in range(0,m):
+                # altera ate buscaLocal posicoes aleatórias
+                tmp = d519.copy.copy(populacao[j].alelos)
+                tmpValues = [d519.copy.copy(populacao[j].valor), d519.copy.copy(populacao[j].peso)]
+                for k in range(0,buscaLocal):
+                    pos = d519.randrange(0,n)
+                    if populacao[j].alelos[pos]:
+                        populacao[j].alelos[pos] = False
+                        populacao[j].valor = populacao[j].valor - V[pos]
+                        populacao[j].peso = populacao[j].peso - M[pos]
+                    else:
+                        populacao[j].alelos[pos] = True
+                        populacao[j].valor = populacao[j].valor + V[pos]
+                        populacao[j].peso = populacao[j].peso + M[pos]
+                # Verifico NÃO se melhorou 'populacao' já alterada.
+                # Lembrando: tmp é o original, populacao é o alterado
+                if tipoProblema == 0:
+                    if populacao[j].valor < tmpValues[0] or populacao[j].peso > W:
+                        # Volta
+                        populacao[j].alelos = tmp
+                        populacao[j].valor= tmpValues[0]
+                        populacao[j].peso = tmpValues[1]
+                else:
+                    if populacao[j].peso > tmpValues[0] or populacao[j].calculaICAlim() < ICLimite:
+                        # Volta
+                        populacao[j].alelos = tmp
+                        populacao[j].valor= tmpValues[0]
+                        populacao[j].peso = tmpValues[1]
             
+        
         # Verifico quem é o melhor para adicionar em melhoresGeracao
         # Imprime melhor solução FACTÍVEL
-        best = [-1, 0, 0]
+        if tipoProblema == 0:
+            best = [-1, 0, 0]
+        else:
+            best = [-1, float('inf'), 0]
         
         for j in range(0,m):
             valor = populacao[j].valor
             peso = populacao[j].peso
 
-            if valor > best[1] and peso <= W:
-                best = [j, valor, peso]
+            if tipoProblema == 0:
+                if valor > best[1] and peso <= W:
+                    best = [j, valor, peso]
+            else:
+                if peso < best[1] and populacao[j].calculaICAlim() >= ICLimite:
+                    best = [j, peso, valor]
+                    
         if best[0] == -1:
+            for j in range(0,m):
+                populacao[j].calculaPenalidade()
             if debug:
                 print 'Nao obteve solução factível ):'
-            # Como nenhuma solução é factível, recupero a com maior fitness e vou retirando aleatoriamente até ela ser factível
-            populacao.sort(key=lambda x: x.calculaFitness(), reverse=True)
-            while populacao[0].peso > W:
-                tmp = d519.randrange(0,n)
-                populacao[0].alelos[tmp] = False
-                populacao[0].valor = populacao[0].valor - V[tmp]
-                populacao[0].peso = populacao[0].peso - M[tmp]
-
-            melhoresGeracao.append(populacao[0].valor)
-            # Verifica se é para inserir nas soluções intermediárias
-            if i in intermediarias:
-                    sIntermediarias.append(populacao[0].valor)
+            # Como nenhuma solução é factível, recupero a com maior/menor fitness e vou retirando aleatoriamente até ela ser factível
+            if tipoProblema == 0:
+                populacao.sort(key=lambda x: x.calculaFitness(), reverse=True)
+                while populacao[0].peso > W:
+                    tmp = d519.randrange(0,n)
+                    populacao[0].alelos[tmp] = False
+                    populacao[0].valor = populacao[0].valor - V[tmp]
+                    populacao[0].peso = populacao[0].peso - M[tmp]
+                melhoresGeracao.append(populacao[0].valor)
+                # Verifica se é para inserir nas soluções intermediárias
+                if i in intermediarias:
+                        sIntermediarias.append(populacao[0].valor)
+            else:
+                populacao.sort(key=lambda x: x.calculaFitness(), reverse=False)
+                while populacao[0].calculaICAlim() < ICLimite:
+                    tmp = d519.randrange(0,n)
+                    populacao[0].alelos[tmp] = True
+                    populacao[0].valor = populacao[0].valor + V[tmp]
+                    populacao[0].peso = populacao[0].peso + M[tmp]
+                melhoresGeracao.append(populacao[0].peso)
+                # Verifica se é para inserir nas soluções intermediárias
+                if i in intermediarias:
+                        sIntermediarias.append(populacao[0].peso)
         else:
             melhoresGeracao.append(best[1])
             if i in intermediarias:
@@ -371,33 +570,21 @@ def mono_ga(params):
         
         if debug:
             print 'Fim da geração %d' % (i)
-        
-        # Mostro os cromossomos da população
-        for j in range(0,m):
-            if debug:
-                print 'Cromossomo %d: Valor: %f Peso: %f Penalidade: %f' % (j, populacao[j].valor, populacao[j].peso, populacao[j].penalidade)
-                print populacao[j].alelos
-            avg[i] = avg[i]+populacao[j].valor
-        avg[i] = avg[i]/float(m)
-        
-        """
-        # Verifico condição de parada
-        if avg[i] == ultimoResultado:
-            mesmoResultado = mesmoResultado + 1
-            if mesmoResultado == v:
-                break
-        else:
-            ultimoResultado = avg[i]
-            mesmoResultado = 0
-        """ 
     
     # Imprime melhor solução FACTÍVEL
-    best = [-1, 0, 0]
+    if tipoProblema == 0:
+        best = [-1, 0, 0]
+    else:
+        best = [-1, float('inf'), 0]
     for j in range(0,m):
         valor = populacao[j].valor
         peso = populacao[j].peso
-        if valor > best[1] and peso <= W:
-            best = [j, valor, peso]
+        if tipoProblema == 0:
+            if valor > best[1] and peso <= W:
+                best = [j, valor, peso]
+        else:
+            if peso < best[1] and populacao[j].calculaICAlim() >= ICLimite:
+                best = [j, peso, valor]
     if best[0] == -1:
         print 'Nao obteve solução factível ):'
         raw_input('Nao obteve solucao factivel. Pressione qualquer tecla para terminar ...')
@@ -409,8 +596,5 @@ def mono_ga(params):
         print 'Melhor solução no cromossomo %d: %f com peso %f' % (best[0], best[1], best[2])
         print populacao[best[0]].alelos
         
-        print '---------------'
-        print 'Medias das gerações: '
-        print avg
     #return populacao[best[0]].alelos
-    return [melhoresGeracao, sIntermediarias]
+    return [melhoresGeracao, sIntermediarias,avaliacoes]
